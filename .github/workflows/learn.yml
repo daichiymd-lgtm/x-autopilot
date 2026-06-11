@@ -1,0 +1,38 @@
+name: X Autopilot Weekly Learning
+
+# 日曜 22:00 JST = 13:00 UTC（投稿スロットと衝突しない時刻）
+on:
+  schedule:
+    - cron: '0 13 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  learn:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt
+      - name: Run learning
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_DM_CHANNEL: ${{ secrets.SLACK_DM_CHANNEL }}
+        run: python -m xautopilot.learn
+      - name: Persist guidance
+        if: always()
+        run: |
+          git config user.name "x-autopilot-bot"
+          git config user.email "x-autopilot-bot@users.noreply.github.com"
+          git add data/guidance.json 2>/dev/null || true
+          git commit -m "chore: update guidance [skip ci]" || echo "no changes"
+          git push || echo "push skipped"

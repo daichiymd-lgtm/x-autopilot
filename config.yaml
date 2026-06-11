@@ -1,0 +1,93 @@
+# ============================================================
+# X Autopilot 設定（ここを編集すれば挙動が変わる・コード改変不要）
+# ============================================================
+
+account:
+  handle: "@daichi631056"          # 投稿先（57戦略: daichi/DC 統一人格・X主戦場）
+
+persona_file: "data/persona.md"     # 人格・経歴正本・トーンの正典
+
+# --- 1日4スロット（朝2・夜2）。各スロットにテーマを割当 ---
+# time_jst は人間可読の参考値。実発火は GitHub Actions の cron（UTC）が制御。
+slots:
+  morning1:
+    time_jst: "07:00"
+    theme: "海外金融×不動産：米欧アジアの金利・REIT・住宅/商業用不動産の最新シグナルを、日本の不動産投資家・実務者の目線で読み解く"
+  morning2:
+    time_jst: "08:30"
+    theme: "AI×地方創生：海外のスマートシティ・地域DX・観光テック・空き家/遊休不動産活用の先行事例を、日本の地方に当てはめて翻訳する"
+  evening1:
+    time_jst: "19:00"
+    theme: "日米情報格差：海外で先行するAI×金融/不動産の実務手法（ツール・ワークフロー）を、日本の現場で今日から使える形に落とす"
+  evening2:
+    time_jst: "21:00"
+    theme: "本日の海外ニュース×日本：金融×不動産×AIで最も示唆深いトピックを1つ選び、背景→何が起きた→日本への含意の順で深掘りする"
+
+# --- スレッド（ツリー）構造 ---
+thread:
+  min_tweets: 3
+  max_tweets: 6
+  max_chars_per_tweet: 270          # 280上限に余白。全角=2扱いではなくXは概ね文字数だが安全側で270
+  number_tweets: true               # 「1/」「2/」等の連番を付ける（読了率向上）
+  cta_self_reply: true              # 本文にURLを貼らずセルフリプにCTA（デブースト回避・57運用ルール）
+  cta_text: |-
+    ▼ 実務の手順・数字の詳細はnoteで深掘りしています
+    https://note.com/daichi9567
+
+# --- 収集層（Grok Live Search） ---
+collect:
+  grok_model: "grok-4-1-fast"       # 安価・2M context・Live Search対応
+  sources: ["web", "x", "news"]     # 海外+日本のリアルタイム
+  max_search_results: 20
+  queries_per_slot: 3               # テーマから3クエリ生成して横断収集
+  recency_hours: 36                 # 直近36時間を優先（鮮度）
+
+# --- 分析・生成層（Claude） ---
+analyze:
+  hook_model: "claude-opus-4-8"               # フック（1ツイート目）専用。全ツイートの印象を決める最重要箇所
+  compose_model: "claude-sonnet-4-6"          # 本文ツイート（2〜N）生成。hook_model と同じ値にすると従来のシングルコールにフォールバック
+  translate_model: "claude-haiku-4-5-20251001" # 海外原文の一次翻訳（安価）
+
+# --- 自動安全ゲート（完全自動なので必須） ---
+gates:
+  ng_words:                          # 経歴正本(53)・スタイルガイド違反語＝即ブロック
+    - "コンサル8年"
+    - "コンサルタント8年"
+    - "社内最優秀賞"
+    - "最優秀賞"
+    - "東京センチュリー"
+    - "大和ハウス"
+    - "KJR"
+    - "年商1000億"
+    - "年商１０００億"
+    - "実装家"
+  block_investment_advice: true      # 個別銘柄推奨・断定的売買助言を禁止（Daichi-Fund原則: AIは推薦しない）
+  advice_risk_words:                 # 検知したら免責付与 or 表現を中立化
+    - "必ず儲かる"
+    - "絶対に上がる"
+    - "今すぐ買い"
+    - "買い推奨"
+    - "おすすめ銘柄"
+    - "確実に"
+  finance_disclaimer: "※投資判断は自己責任で。本投稿は情報提供であり特定銘柄の売買推奨ではありません。"
+  require_pr_on_promo: true          # 宣伝/アフィリ要素があれば PR表記（ステマ規制）
+  dedup_days: 30                     # 過去N日と似たトピックは再投稿しない
+  dedup_similarity: 0.62             # Jaccard類似度しきい値
+  max_regenerate: 1                  # ゲート不合格時の再生成回数
+
+# --- 投稿層 ---
+publish:
+  enabled: true                      # false = ドライラン（生成のみ・投稿しない）
+  mode: "direct"                     # direct=即投稿 / buffer=Slack予告30分後 / draft=下書き配信のみ
+  buffer_minutes: 30                 # mode=buffer のときの予告猶予
+
+# --- 通知 ---
+notify:
+  slack_enabled: true                # SLACK_BOT_TOKEN があれば通知。無ければ自動でスキップ
+  on_success: true                   # 投稿成功も通知（うるさければ false）
+  on_error: true
+
+# --- 学習層 ---
+learn:
+  guidance_file: "data/guidance.json"
+  pull_engagement: true              # 週次でインプレ/いいねを取得し指針更新

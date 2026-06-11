@@ -1,0 +1,13 @@
+# secrets
+.env
+*.env
+# runtime data (keep ledger schema, ignore local logs)
+data/logs/
+*.log
+__pycache__/
+*.pyc
+.venv/
+venv/
+# OS
+Thumbs.db
+.DS_Store

@@ -1,0 +1,79 @@
+name: X Autopilot Post
+
+# 朝2回・夜2回（JST）。GitHub Actions の cron は UTC。
+#   07:00 JST = 22:00 UTC(前日) / 08:30 JST = 23:30 UTC(前日)
+#   19:00 JST = 10:00 UTC       / 21:00 JST = 12:00 UTC
+on:
+  schedule:
+    - cron: '0 22 * * *'    # morning1 07:00 JST
+    - cron: '30 23 * * *'   # morning2 08:30 JST
+    - cron: '0 10 * * *'    # evening1 19:00 JST
+    - cron: '0 12 * * *'    # evening2 21:00 JST
+  workflow_dispatch:
+    inputs:
+      slot:
+        description: '手動実行するスロット'
+        default: 'morning1'
+        type: choice
+        options: [morning1, morning2, evening1, evening2]
+      dry_run:
+        description: 'ドライラン（投稿しない）'
+        default: false
+        type: boolean
+
+permissions:
+  contents: write   # 台帳(ledger)をリポジトリに書き戻すため
+
+concurrency:
+  group: x-autopilot-post
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install deps
+        run: pip install -r requirements.txt
+
+      - name: Resolve slot from schedule
+        id: slot
+        run: |
+          case "${{ github.event.schedule }}" in
+            "0 22 * * *")  echo "slot=morning1" >> "$GITHUB_OUTPUT" ;;
+            "30 23 * * *") echo "slot=morning2" >> "$GITHUB_OUTPUT" ;;
+            "0 10 * * *")  echo "slot=evening1" >> "$GITHUB_OUTPUT" ;;
+            "0 12 * * *")  echo "slot=evening2" >> "$GITHUB_OUTPUT" ;;
+            *)             echo "slot=${{ github.event.inputs.slot }}" >> "$GITHUB_OUTPUT" ;;
+          esac
+
+      - name: Run slot
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_DM_CHANNEL: ${{ secrets.SLACK_DM_CHANNEL }}
+        run: |
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            python -m xautopilot.run --slot "${{ steps.slot.outputs.slot }}" --dry-run
+          else
+            python -m xautopilot.run --slot "${{ steps.slot.outputs.slot }}"
+          fi
+
+      - name: Persist ledger
+        if: always()
+        run: |
+          git config user.name "x-autopilot-bot"
+          git config user.email "x-autopilot-bot@users.noreply.github.com"
+          git add data/_post_ledger.json data/guidance.json 2>/dev/null || true
+          git commit -m "chore: update ledger [skip ci]" || echo "no changes"
+          git push || echo "push skipped"

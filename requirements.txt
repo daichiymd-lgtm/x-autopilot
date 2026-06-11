@@ -1,0 +1,7 @@
+# X Autopilot — 海外インテリジェンス自動発信エンジン
+# Python 3.10+
+anthropic>=0.40.0       # Claude API（翻訳・分析・スレ生成）
+tweepy>=4.14.0          # X API v2（投稿）
+requests>=2.31.0        # Grok(xAI) Live Search / Slack / FELO
+PyYAML>=6.0             # config.yaml
+python-dotenv>=1.0.0    # .env ローカル実行用
