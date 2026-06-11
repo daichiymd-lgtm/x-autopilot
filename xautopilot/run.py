@@ -39,8 +39,10 @@ def run_slot(slot_key: str, dry_run: bool = False) -> None:
         log("同日同スロットで投稿済み。スキップ。")
         return
 
-    # 1) 収集（Grok Live Search）
+    # 1) 収集（Grok Live Search・失敗時はClaude単体フォールバック）
     signals = collect.collect_signals(cfg, theme)
+    if signals.get("fallback"):
+        log("⚠️ Grokフォールバック中: Claude単体でテーマからスレッドを生成")
     guidance = load_guidance(cfg)
 
     # 2) 生成 + ゲート再生成ループ

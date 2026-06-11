@@ -42,16 +42,22 @@ def collect_signals(cfg: dict, theme: str) -> dict:
         },
         "temperature": 0.3,
     }
-    r = requests.post(
-        XAI_URL,
-        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
-        json=body, timeout=180,
-    )
-    r.raise_for_status()
-    data = r.json()
-    content = data["choices"][0]["message"]["content"]
-    # xAI は版により citations の場所が異なるため両対応
-    citations = data.get("citations") or \
-        data["choices"][0]["message"].get("citations") or []
-    log(f"Grok収集 完了（本文{len(content)}字 / 出典{len(citations)}件 / theme={theme[:24]}…）")
-    return {"raw": content, "citations": citations}
+    try:
+        r = requests.post(
+            XAI_URL,
+            headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+            json=body, timeout=180,
+        )
+        if not r.ok:
+            log(f"Grok API エラー {r.status_code}: {r.text[:500]}")
+            r.raise_for_status()
+        data = r.json()
+        content = data["choices"][0]["message"]["content"]
+        # xAI は版により citations の場所が異なるため両対応
+        citations = data.get("citations") or \
+            data["choices"][0]["message"].get("citations") or []
+        log(f"Grok収集 完了（本文{len(content)}字 / 出典{len(citations)}件 / theme={theme[:24]}…）")
+        return {"raw": content, "citations": citations}
+    except Exception as e:
+        log(f"Grok収集 失敗（{e}）→ Claude単体モードにフォールバック")
+        return {"raw": "", "citations": [], "fallback": True}
