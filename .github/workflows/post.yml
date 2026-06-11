@@ -5,10 +5,10 @@ name: X Autopilot Post
 #   19:00 JST = 10:00 UTC       / 21:00 JST = 12:00 UTC
 on:
   schedule:
-    - cron: '0 22 * * *'    # morning1 07:00 JST
-    - cron: '30 23 * * *'   # morning2 08:30 JST
-    - cron: '0 10 * * *'    # evening1 19:00 JST
-    - cron: '0 12 * * *'    # evening2 21:00 JST
+    - cron: '0 23 * * *'    # morning1 08:00 JST（夜間の海外市場/AIが出揃う）
+    - cron: '30 3 * * *'    # morning2 12:30 JST（昼休み）
+    - cron: '0 10 * * *'    # evening1 19:00 JST（帰宅）
+    - cron: '30 12 * * *'   # evening2 21:30 JST（夜ゴールデン＝主砲）
   workflow_dispatch:
     inputs:
       slot:
@@ -45,10 +45,10 @@ jobs:
         id: slot
         run: |
           case "${{ github.event.schedule }}" in
-            "0 22 * * *")  echo "slot=morning1" >> "$GITHUB_OUTPUT" ;;
-            "30 23 * * *") echo "slot=morning2" >> "$GITHUB_OUTPUT" ;;
+            "0 23 * * *")  echo "slot=morning1" >> "$GITHUB_OUTPUT" ;;
+            "30 3 * * *")  echo "slot=morning2" >> "$GITHUB_OUTPUT" ;;
             "0 10 * * *")  echo "slot=evening1" >> "$GITHUB_OUTPUT" ;;
-            "0 12 * * *")  echo "slot=evening2" >> "$GITHUB_OUTPUT" ;;
+            "30 12 * * *") echo "slot=evening2" >> "$GITHUB_OUTPUT" ;;
             *)             echo "slot=${{ github.event.inputs.slot }}" >> "$GITHUB_OUTPUT" ;;
           esac
 

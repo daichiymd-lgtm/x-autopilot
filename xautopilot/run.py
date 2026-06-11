@@ -28,6 +28,9 @@ def run_slot(slot_key: str, dry_run: bool = False) -> None:
 
     slot = cfg["slots"][slot_key]
     theme = slot["theme"]
+    style = slot.get("style")
+    if style:
+        theme = f"{theme}\n\n【この投稿の形式・モード】{style}"
     pub = dict(cfg["publish"])
     if dry_run:
         pub["enabled"] = False
@@ -107,7 +110,12 @@ def run_slot(slot_key: str, dry_run: bool = False) -> None:
     ledger.record(slot_key, theme, thread.get("topic", ""), thread.get("hook", ""),
                   result["ids"], result["url"], status="posted")
     if cfg["notify"].get("on_success"):
-        notify.slack(cfg, f":white_check_mark: X Autopilot 投稿完了({slot_key})\n{thread.get('topic', '')}\n{result['url']}")
+        notify.slack(
+            cfg,
+            f":white_check_mark: X Autopilot 投稿完了({slot_key})\n{thread.get('topic', '')}\n{result['url']}\n\n"
+            ":fire: *いまから30分が勝負*：リプが来たら本人として返信して会話を伸ばす"
+            "（会話＝いいねの約75倍／2026アルゴで最強シグナル）。初速のリプ・プロフクリックが拡散を決めます。"
+        )
     log(f"=== 完了: {result['url']} ===")
 
 
