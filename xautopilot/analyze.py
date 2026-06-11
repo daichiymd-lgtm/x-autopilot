@@ -31,6 +31,39 @@ def _client():
     return Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
 
+def _loads_lenient(raw: str, cfg: dict = None) -> dict:
+    """LLM出力JSONの寛容パース。壊れていたらHaikuで修復（本文中の未エスケープ引用符対策）."""
+    text = _strip_json(raw)
+    try:
+        return json.loads(text)
+    except Exception:
+        pass
+    try:
+        return json.loads(text, strict=False)
+    except Exception:
+        pass
+    try:  # 生の改行が文字列内に入っているケース
+        return json.loads(text.replace("\r", "").replace("\n", "\\n"), strict=False)
+    except Exception:
+        pass
+    # 最終手段: Haiku に修復させる（安価・確実）
+    if cfg:
+        try:
+            c = _client()
+            msg = c.messages.create(
+                model=cfg["analyze"].get("translate_model", "claude-haiku-4-5-20251001"),
+                max_tokens=2500,
+                messages=[{"role": "user", "content":
+                           "次のテキストを有効なJSONに修復し、JSONのみを返してください。"
+                           "文字列内の引用符はエスケープし、内容は変更しないこと。\n\n" + text[:6000]}])
+            fixed = _strip_json(msg.content[0].text)
+            log("JSON修復: Haikuで復元成功")
+            return json.loads(fixed, strict=False)
+        except Exception as e:
+            log(f"JSON修復失敗: {e}")
+    raise json.JSONDecodeError("unrecoverable", text[:80], 0)
+
+
 # ---------------------------------------------------------------
 # 話題選定: トレンド候補 → 1本に絞る
 # ---------------------------------------------------------------
@@ -63,7 +96,7 @@ def select_topic(cfg: dict, trends_raw: str, lens: str, style: str,
     msg = c.messages.create(
         model=cfg["analyze"]["compose_model"], max_tokens=600,
         messages=[{"role": "user", "content": prompt}])
-    data = json.loads(_strip_json(msg.content[0].text))
+    data = _loads_lenient(msg.content[0].text, cfg)
     log(f"話題選定: {data.get('topic', '')} / 形式={data.get('content_format', '')}")
     return data
 
@@ -163,8 +196,7 @@ def _gen_body(client, model: str, persona: str, theme: str, signals: dict,
         system=sys_prompt,
         messages=[{"role": "user", "content": user}],
     )
-    raw = msg.content[0].text
-    return json.loads(_strip_json(raw))
+    return _loads_lenient(msg.content[0].text, {"analyze": {"translate_model": "claude-haiku-4-5-20251001"}})
 
 
 def _compose_single(client, model: str, persona: str, theme: str, signals: dict,
@@ -198,8 +230,7 @@ def _compose_single(client, model: str, persona: str, theme: str, signals: dict,
         system=sys_prompt,
         messages=[{"role": "user", "content": user}],
     )
-    raw = msg.content[0].text
-    data = json.loads(_strip_json(raw))
+    data = _loads_lenient(msg.content[0].text, {"analyze": {"translate_model": "claude-haiku-4-5-20251001"}})
     tweets = data.get("tweets") or []
     if data.get("hook") and (not tweets or tweets[0].strip() != data["hook"].strip()):
         tweets = [data["hook"]] + tweets
@@ -280,7 +311,7 @@ def score_thread(cfg: dict, thread: dict) -> dict:
     msg = c.messages.create(
         model=cfg["analyze"]["compose_model"], max_tokens=400,
         messages=[{"role": "user", "content": prompt}])
-    data = json.loads(_strip_json(msg.content[0].text))
+    data = _loads_lenient(msg.content[0].text, cfg)
     log(f"品質採点: {data.get('score')}/10 tsubuyaki={data.get('tsubuyaki')} "
         f"{json.dumps(data.get('breakdown', {}), ensure_ascii=False)}")
     return data
