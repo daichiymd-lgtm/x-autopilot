@@ -5,17 +5,18 @@ name: X Autopilot Post
 #   19:00 JST = 10:00 UTC       / 21:00 JST = 12:00 UTC
 on:
   schedule:
-    - cron: '0 23 * * *'    # morning1 08:00 JST（夜間の海外市場/AIが出揃う）
-    - cron: '30 3 * * *'    # morning2 12:30 JST（昼休み）
-    - cron: '0 10 * * *'    # evening1 19:00 JST（帰宅）
-    - cron: '30 12 * * *'   # evening2 21:30 JST（夜ゴールデン＝主砲）
+    - cron: '0 23 * * *'    # morning1   08:00 JST（夜間の海外市場/AIが出揃う）
+    - cron: '30 3 * * *'    # morning2   12:30 JST（昼休み・実用ネタ）
+    - cron: '0 8 * * *'     # afternoon1 17:00 JST（保存版チェックリスト）
+    - cron: '30 10 * * *'   # evening1   19:30 JST（帰宅・実務手法）
+    - cron: '0 13 * * *'    # evening2   22:00 JST（夜ゴールデン＝主砲）
   workflow_dispatch:
     inputs:
       slot:
         description: '手動実行するスロット'
         default: 'morning1'
         type: choice
-        options: [morning1, morning2, evening1, evening2]
+        options: [morning1, morning2, afternoon1, evening1, evening2]
       dry_run:
         description: 'ドライラン（投稿しない）'
         default: false
@@ -47,8 +48,9 @@ jobs:
           case "${{ github.event.schedule }}" in
             "0 23 * * *")  echo "slot=morning1" >> "$GITHUB_OUTPUT" ;;
             "30 3 * * *")  echo "slot=morning2" >> "$GITHUB_OUTPUT" ;;
-            "0 10 * * *")  echo "slot=evening1" >> "$GITHUB_OUTPUT" ;;
-            "30 12 * * *") echo "slot=evening2" >> "$GITHUB_OUTPUT" ;;
+            "0 8 * * *")   echo "slot=afternoon1" >> "$GITHUB_OUTPUT" ;;
+            "30 10 * * *") echo "slot=evening1" >> "$GITHUB_OUTPUT" ;;
+            "0 13 * * *")  echo "slot=evening2" >> "$GITHUB_OUTPUT" ;;
             *)             echo "slot=${{ github.event.inputs.slot }}" >> "$GITHUB_OUTPUT" ;;
           esac
 

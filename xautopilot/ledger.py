@@ -71,6 +71,20 @@ def record(slot: str, theme: str, topic: str, hook: str, tweet_ids: list,
     log(f"台帳に記録: {status} / {topic[:30]}")
 
 
+def recent_topics(days: int = 7) -> list:
+    """直近N日のトピック一覧（話題選定の重複回避に使う）."""
+    d = _load()
+    cutoff = now_jst() - timedelta(days=days)
+    out = []
+    for p in d["posts"]:
+        try:
+            if datetime.fromisoformat(p["ts"]) >= cutoff and p.get("topic"):
+                out.append(p["topic"])
+        except Exception:
+            continue
+    return out
+
+
 def already_posted_this_slot_today(slot: str) -> bool:
     """同日同スロットの二重投稿を防ぐ（02-Mistakes 2026-06-09 ad-hoc二重配信の教訓）."""
     d = _load()

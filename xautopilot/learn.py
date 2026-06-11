@@ -12,14 +12,14 @@ from . import ledger, publish, notify
 def _score(metrics: dict) -> int:
     if not metrics:
         return 0
-    # インプレッションが取れればそれを主指標、無ければ反応の合計
-    imp = metrics.get("impression_count")
-    if imp:
-        return int(imp)
-    return (metrics.get("like_count", 0) * 3
-            + metrics.get("retweet_count", 0) * 5
-            + metrics.get("reply_count", 0) * 2
-            + metrics.get("quote_count", 0) * 4)
+    # インプレ + 反応の重み付き合計。ブックマーク=有用性の最強シグナル（2026調査）なので最重視
+    imp = int(metrics.get("impression_count") or 0)
+    weighted = (metrics.get("like_count", 0) * 3
+                + metrics.get("retweet_count", 0) * 5
+                + metrics.get("reply_count", 0) * 4
+                + metrics.get("quote_count", 0) * 4
+                + metrics.get("bookmark_count", 0) * 10)
+    return imp + weighted
 
 
 def run_learning() -> None:
@@ -69,15 +69,17 @@ def run_learning() -> None:
         from anthropic import Anthropic
         c = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
         prompt = (
-            "あなたはXグロース分析者。以下は同一アカウントの投稿スコア。\n\n"
+            "あなたはXグロース分析者。以下は同一アカウントの投稿スコア"
+            "（インプレ＋反応の重み付き。ブックマーク=有用性の最強シグナルとして×10）。\n\n"
             f"【上位】\n{fmt(top)}\n\n【下位】\n{fmt(bottom)}\n\n"
             f"【現在の指針】\n{json.dumps(cur, ensure_ascii=False)}\n\n"
-            "上位と下位の差からフック/トピックの法則を更新し、次の指針JSONだけ返す。"
+            "上位と下位の差から『どんな話題・フック・形式が読者の役に立ち伸びたか』の法則を更新し、"
+            "次の指針JSONだけ返す。confirmed_hooksには伸びた話題ジャンルも含めること。"
             'JSON: {"version":N+1,"updated":"YYYY-MM-DD","confirmed_hooks":[...],'
-            '"trying":[...],"avoid":[...],"notes":"1行"}'
+            '"winning_topics":[...],"trying":[...],"avoid":[...],"notes":"1行"}'
         )
         msg = c.messages.create(
-            model=cfg["analyze"]["compose_model"], max_tokens=1200, temperature=0.4,
+            model=cfg["analyze"]["compose_model"], max_tokens=1200,
             messages=[{"role": "user", "content": prompt}])
         from .analyze import _strip_json
         new_guidance = json.loads(_strip_json(msg.content[0].text))
