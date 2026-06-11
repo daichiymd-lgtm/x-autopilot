@@ -36,7 +36,7 @@ thread:
 
 # --- 収集層（Grok Live Search） ---
 collect:
-  grok_model: "grok-4-1-fast"       # 安価・2M context・Live Search対応
+  grok_model: "grok-3-fast"          # Live Search対応・高速・低コスト
   sources: ["web", "x", "news"]     # 海外+日本のリアルタイム
   max_search_results: 20
   queries_per_slot: 3               # テーマから3クエリ生成して横断収集
