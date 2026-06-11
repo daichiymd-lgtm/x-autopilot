@@ -44,7 +44,7 @@ def _gen_hook(client, model: str, persona: str, theme: str, signals: dict,
         + "このテーマの『フック（1ツイート目）』だけを1文で書いてください。"
     )
     msg = client.messages.create(
-        model=model, max_tokens=300, temperature=0.8,
+        model=model, max_tokens=300,
         system=sys_prompt,
         messages=[{"role": "user", "content": user}],
     )
@@ -81,7 +81,7 @@ def _gen_body(client, model: str, persona: str, theme: str, signals: dict,
         '"sources":["主要な出典URL 最大3"],"is_finance":true/false}'
     )
     msg = client.messages.create(
-        model=model, max_tokens=2000, temperature=0.7,
+        model=model, max_tokens=2000,
         system=sys_prompt,
         messages=[{"role": "user", "content": user}],
     )
@@ -116,7 +116,7 @@ def _compose_single(client, model: str, persona: str, theme: str, signals: dict,
         '"sources":["主要な出典URL 最大3"],"is_finance":true/false}'
     )
     msg = client.messages.create(
-        model=model, max_tokens=2200, temperature=0.7,
+        model=model, max_tokens=2200,
         system=sys_prompt,
         messages=[{"role": "user", "content": user}],
     )
