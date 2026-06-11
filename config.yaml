@@ -36,7 +36,7 @@ thread:
 
 # --- 収集層（Grok Live Search） ---
 collect:
-  grok_model: "grok-3-fast"          # Live Search対応・高速・低コスト
+  grok_model: "grok-4.3"             # Responses API + web_search tool 対応（2026-06移行）
   sources: ["web", "x", "news"]     # 海外+日本のリアルタイム
   max_search_results: 20
   queries_per_slot: 3               # テーマから3クエリ生成して横断収集
