@@ -1,6 +1,16 @@
 {
   "posts": [
     {
+      "ts": "2026-07-05T23:25:02.515628+09:00",
+      "slot": "evening2",
+      "theme": "AWS Summit Japan 2026 生成AIエージェント×不動産データ戦略\n【編集方針】Amazon Connect・MCP・生成AIエージェントの3レ",
+      "topic": "不動産AIコンシェルジュ実装5ステップROIフレームワーク",
+      "hook": "AWS Summit Japan 2026、全167セッションの約半数がAIエージェント。不動産デモで衝撃だったのは技術じゃない。「自社の物件DBにAPIが生えてるか？」——この1問に答えられない事業者は、月5万円のAIすら接続できない。分かれ目はここでした👇",
+      "tweet_ids": [],
+      "url": "",
+      "status": "error"
+    },
+    {
       "ts": "2026-07-05T20:58:55.472624+09:00",
       "slot": "evening1",
       "theme": "Cushman&Wakefield：AI需要で米CRE+3.3億sf・日本ポートフォリオ5指標\n【編集方針】米国の工業・DC・オフィス需要予測を日本の物流REI",
