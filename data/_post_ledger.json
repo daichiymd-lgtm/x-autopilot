@@ -1,6 +1,16 @@
 {
   "posts": [
     {
+      "ts": "2026-07-10T09:07:55.554599+09:00",
+      "slot": "morning1",
+      "theme": "ChatGPT Work 7/9ローンチ｜不動産・金融実務エージェント活用速報\n【編集方針】REIT分析・市場レポート・投資資料作成をScheduled Tas",
+      "topic": "ChatGPT Work｜不動産金融実務Scheduled Tasks即日検証",
+      "hook": "【速報】ChatGPT Work、7/9ローンチ。REIT分析を毎朝自動で回せる時代に。\n\n・複雑タスクを数時間連続処理\n・Scheduled Tasksを自然言語1文で設定\n・Drive参照→レポート生成→Slack通知まで一貫\n\n「毎朝8時に日本REIT要約」が現実に。実務家として最初に自動化すべきは？",
+      "tweet_ids": [],
+      "url": "",
+      "status": "error"
+    },
+    {
       "ts": "2026-07-10T00:52:56.959794+09:00",
       "slot": "evening2",
       "theme": "大東建託×dotData：予防型AI内部監査が不動産実務を変える\n【編集方針】dotData型予防監査の仕組みを解剖し、中小不動産・管理会社が類似ツールを自社監",
