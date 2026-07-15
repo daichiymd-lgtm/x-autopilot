@@ -1,6 +1,16 @@
 {
   "posts": [
     {
+      "ts": "2026-07-15T21:04:45.429877+09:00",
+      "slot": "evening1",
+      "theme": "Hostaway AI CoHost正式リリース：短期賃貸AI運用の実態\n【編集方針】HostawayのAI CoHostが行う収益分析・タスク自動化の構造を分",
+      "topic": "Hostaway AI CoHost×日本版5ステップ再現ガイド",
+      "hook": "Hostawayが2026年6月、民泊AI運用ツール「AI CoHost」を正式リリース。メッセージ自動化90%・予約1件60分削減・収益+25%。追加料金ゼロ。\n\n日本のSTAY JAPANやAirbnb連携PMSでどこまで同じことができるか、5ステップで分解した👇",
+      "tweet_ids": [],
+      "url": "",
+      "status": "error"
+    },
+    {
       "ts": "2026-07-15T19:04:13.024416+09:00",
       "slot": "afternoon1",
       "theme": "AI基本計画第2期決定：不動産・金融実務家が今週確認すべき政策変更点\n【編集方針】融資審査・リスク管理・PropTech導入に関わる支援策と規制方針を箇条書きで",
