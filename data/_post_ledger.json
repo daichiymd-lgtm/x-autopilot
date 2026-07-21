@@ -1,6 +1,16 @@
 {
   "posts": [
     {
+      "ts": "2026-07-22T08:58:22.299141+09:00",
+      "slot": "morning1",
+      "theme": "NVIDIA Spectrum-6発表×DCREITへの波及：日本投資家の朝一判断\n【編集方針】Spectrum-6×Vera Rubinの出荷開始でDCインフ",
+      "topic": "Spectrum-6×DC REIT：日本投資家の朝一5チェック",
+      "hook": "【速報】NVIDIA Spectrum-6が7/21出荷開始、電力効率5倍でAIファクトリー仕様が確定。これ「チップが速い」話じゃない。DC REIT（EQIX/DLR）がVNQを今年+21pt上回った理由と、日本投資家が今朝チェックすべき5項目を置いておく👇あなたはDC特化派？分散REIT派？",
+      "tweet_ids": [],
+      "url": "",
+      "status": "error"
+    },
+    {
       "ts": "2026-07-21T23:54:58.711951+09:00",
       "slot": "evening2",
       "theme": "NVIDIA×Noetra 140MWファクトリーで読む日本データセンター不動産投資の転換点\n【編集方針】①DC用地・電力容量・建設需要の3軸で不動産投資スクリ",
