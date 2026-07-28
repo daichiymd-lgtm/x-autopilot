@@ -1,6 +1,16 @@
 {
   "posts": [
     {
+      "ts": "2026-07-28T09:05:15.065550+09:00",
+      "slot": "morning1",
+      "theme": "NVIDIA×OpenAI $250B融資保証でAI株急落・円環ファイナンス懸念\n【編集方針】circular financingリスクの構造をひも解き、Equ",
+      "topic": "NVIDIA×OpenAI円環ファイナンスとDC REIT波及の5点チェック",
+      "hook": "【速報】NVIDIAがOpenAIの債務に$250B融資保証を検討→報道当日NVDA▲5%・AMD▲8%。市場が一瞬で見抜いたのは「AI収益$60Bが資本支出$400Bの15%」という円環構造の脆さ。この波及、実はEQIX等DC REITを持つ日本勢に今朝効く。点検すべき5点を↓",
+      "tweet_ids": [],
+      "url": "",
+      "status": "error"
+    },
+    {
       "ts": "2026-07-28T00:36:41.667525+09:00",
       "slot": "evening2",
       "theme": "三井不動産DC6000億円×NVIDIA38兆円：AIインフラ不動産投資の読み方\n【編集方針】DC用地・電力・冷却の3ボトルネックを軸に、J-REIT/私募ファ",
