@@ -1,6 +1,16 @@
 {
   "posts": [
     {
+      "ts": "2026-07-31T09:03:56.500115+09:00",
+      "slot": "morning1",
+      "theme": "Microsoft vs Meta AI決算格差：DC-REIT投資判断5点チェック\n【編集方針】MicrosoftのAzure成長確認→DC-REIT需要継続",
+      "topic": "DC-REIT保有者のMicrosoft vs Meta決算後5点点検",
+      "hook": "【速報】MicrosoftとMeta、同じAI決算で真逆のシグナルが出た。Azure成長率43%＝DC需要継続、一方MetaはFCFが前年比91%減の$784M。DC-REIT保有者が今日確認すべきは「量」より「どのテナントに依存しているか」。点検5点を下にまとめる👇",
+      "tweet_ids": [],
+      "url": "",
+      "status": "error"
+    },
+    {
       "ts": "2026-07-31T00:00:32.383429+09:00",
       "slot": "evening2",
       "theme": "不動産AIテックコンテスト2026・本日登壇5社の見極め方\n【編集方針】AIサービス乱立期に「現場で使えるか」を判定する評価軸を保存版フレームワーク化。登壇5社",
