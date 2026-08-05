@@ -1,6 +1,16 @@
 {
   "posts": [
     {
+      "ts": "2026-08-05T09:05:03.736025+09:00",
+      "slot": "morning1",
+      "theme": "Trump政権AI規制：オープン免除×クローズド審査の二極化（8/4）\n【編集方針】Meta Llama・Nvidia Nemotronなどオープンウェイト系ツ",
+      "topic": "Trump AI規制EO14409：オープン/クローズド調達仕分けと実務コスト",
+      "hook": "【速報】Trump政権のAI規制、6/2署名のEO14409でツールが真っ二つに分かれた。\n\n・Meta Llama／Nvidia Nemotron＝政府審査「免除」\n・OpenAI／Anthropic＝リリース前30日の審査対象\n\n金融・不動産で使うAI、あなたのはどっち側？調達コストが変わる👇",
+      "tweet_ids": [],
+      "url": "",
+      "status": "error"
+    },
+    {
       "ts": "2026-08-05T00:15:32.040322+09:00",
       "slot": "evening2",
       "theme": "日米協調為替介入・円157円台急伸の不動産×REIT再設定フレーム\n【編集方針】ドル円5円急伸が米国REITの円建てリターン・海外物件購入コスト・融資為替条項に",
