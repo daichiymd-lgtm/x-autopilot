@@ -1,6 +1,16 @@
 {
   "posts": [
     {
+      "ts": "2026-08-11T08:37:25.176887+09:00",
+      "slot": "morning1",
+      "theme": "Nvidia×Wall Street $500B AIインフラ融資プラットフォーム速報\n【編集方針】Apollo・Blackstone・BlackRock・KK",
+      "topic": "Nvidia×Wall Street $500B AIインフラ融資・担保構造の実務判断軸",
+      "hook": "【速報】NvidiaがApollo・Blackstone・KKRら6社と$500BのAIインフラ融資プラットフォーム設立。でも中身はGPU担保のリースバックABF。問題は「会計上5〜6年償却なのに実耐用は2〜3年」。DC-REITを組む日本人が真っ先に見るべき3つの数字を置いておく👇",
+      "tweet_ids": [],
+      "url": "",
+      "status": "error"
+    },
+    {
       "ts": "2026-08-10T23:11:37.422579+09:00",
       "slot": "evening2",
       "theme": "Stanford AI Index 2026×DC-REIT：2,859億ドルが動かす日本不動産\n【編集方針】AI投資額→DC需要→日本の用地逼迫→キャップレー",
