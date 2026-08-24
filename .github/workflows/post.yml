@@ -1,15 +1,8 @@
 name: X Autopilot Post
 
-# 朝2回・夜2回（JST）。GitHub Actions の cron は UTC。
-#   07:00 JST = 22:00 UTC(前日) / 08:30 JST = 23:30 UTC(前日)
-#   19:00 JST = 10:00 UTC       / 21:00 JST = 12:00 UTC
+# 2026-08-24: 定期実行を停止。xAI $10課金（日曜22:00 JST evening2と一致）。
+# 投稿本番は note-x-daily-post。解凍は publish.frozen=false と X_AUTOPILOT_FROZEN=0 が必要。
 on:
-  schedule:
-    - cron: '0 23 * * *'    # morning1   08:00 JST（夜間の海外市場/AIが出揃う）
-    - cron: '30 3 * * *'    # morning2   12:30 JST（昼休み・実用ネタ）
-    - cron: '0 8 * * *'     # afternoon1 17:00 JST（保存版チェックリスト）
-    - cron: '30 10 * * *'   # evening1   19:30 JST（帰宅・実務手法）
-    - cron: '0 13 * * *'    # evening2   22:00 JST（夜ゴールデン＝主砲）
   workflow_dispatch:
     inputs:
       slot:
@@ -56,8 +49,8 @@ jobs:
 
       - name: Run slot
         env:
+          X_AUTOPILOT_FROZEN: "1"
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
           X_API_KEY: ${{ secrets.X_API_KEY }}
           X_API_SECRET: ${{ secrets.X_API_SECRET }}
           X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}

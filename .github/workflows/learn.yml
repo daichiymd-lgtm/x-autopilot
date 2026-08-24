@@ -1,9 +1,7 @@
 name: X Autopilot Weekly Learning
 
-# 日曜 22:00 JST = 13:00 UTC（投稿スロットと衝突しない時刻）
+# 2026-08-24: 定期実行を停止（x-autopilot凍結）
 on:
-  schedule:
-    - cron: '0 13 * * 0'
   workflow_dispatch:
 
 permissions:

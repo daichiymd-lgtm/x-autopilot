@@ -91,7 +91,8 @@ gates:
 
 # --- 投稿層 ---
 publish:
-  enabled: true                      # false = ドライラン（生成のみ・投稿しない）
+  frozen: true                       # true = Grokも投稿もしない（2026-08-24 xAI $10停止）
+  enabled: false                     # false = ドライラン（生成のみ・投稿しない）
   mode: "direct"                     # direct=即投稿 / buffer=Slack予告30分後 / draft=下書き配信のみ
   buffer_minutes: 30                 # mode=buffer のときの予告猶予
 
