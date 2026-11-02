@@ -54,7 +54,7 @@ def is_duplicate(topic_text: str, days: int, threshold: float):
 
 
 def record(slot: str, theme: str, topic: str, hook: str, tweet_ids: list,
-           url: str, status: str = "posted") -> None:
+           url: str, status: str = "posted", error: str = "") -> None:
     d = _load()
     d["posts"].insert(0, {
         "ts": now_jst().isoformat(),
@@ -65,6 +65,7 @@ def record(slot: str, theme: str, topic: str, hook: str, tweet_ids: list,
         "tweet_ids": [str(t) for t in (tweet_ids or [])],
         "url": url,
         "status": status,
+        **({"error": error[:300]} if error else {}),
     })
     d["posts"] = d["posts"][:500]
     _save(d)

@@ -190,7 +190,8 @@ def run_slot(slot_key: str, dry_run: bool = False) -> None:
         result = publish.post_thread(cfg, tweets, cta)
     except Exception as e:
         notify.slack(cfg, f":x: X Autopilot 投稿失敗({slot_key}): {e}")
-        ledger.record(slot_key, theme[:80], thread.get("topic", ""), thread.get("hook", ""), [], "", status="error")
+        ledger.record(slot_key, theme[:80], thread.get("topic", ""), thread.get("hook", ""), [], "",
+                      status="error", error=f"{type(e).__name__}: {e}")
         raise
     ledger.record(slot_key, theme[:80], thread.get("topic", ""), thread.get("hook", ""),
                   result["ids"], result["url"], status="posted")
