@@ -29,7 +29,7 @@ def main():
     cfg = load_config()
 
     # 1) config
-    check("config.slots が4スロット", len(cfg["slots"]) == 4, str(list(cfg["slots"])))
+    check("config.slots が5スロット", len(cfg["slots"]) == 5, str(list(cfg["slots"])))
     check("persona 読み込み", len(read_persona(cfg)) > 100)
 
     # 2) ゲート: NG語検知
