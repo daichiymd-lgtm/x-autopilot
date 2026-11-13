@@ -69,7 +69,7 @@ def build_signals(cfg: dict, slot: dict, theme_lens: str, style: str) -> tuple:
     # フォールバック: 旧来のテーマ起点収集
     signals = collect.collect_signals(cfg, theme_lens)
     if signals.get("fallback"):
-        log("⚠️ Grok全滅: Claude単体でテーマからスレッドを生成")
+        log("⚠️ web検索が全滅: 出典なし（fallback）")
     return signals, f"{theme_lens}\n\n【この投稿の形式・モード】{style}"
 
 
@@ -79,10 +79,11 @@ def run_slot(slot_key: str, dry_run: bool = False) -> None:
     if slot_key not in cfg["slots"]:
         raise SystemExit(f"未知のスロット: {slot_key}（{list(cfg['slots'])}）")
 
-    # 2026-08-24: xAI Stripe $10。投稿は note-x-daily-post。Grok APIは呼ばない。
+    # 凍結スイッチ: config の publish.frozen と環境変数 X_AUTOPILOT_FROZEN の両方を解かないと動かない。
+    # 2026-08-24 に xAI の課金（$10）で凍結。2026-11 に検索を Claude へ切り替えて再開（xAI は呼ばない）。
     frozen = cfg.get("publish", {}).get("frozen", True)
     if os.environ.get("X_AUTOPILOT_FROZEN", "1") != "0" or frozen:
-        log("凍結中: xAI/Grok も X API 投稿もしない（7/8裁定・8/24領収書）。本番Xは note-x-daily-post。")
+        log("凍結中: 収集も X API 投稿もしない（publish.frozen / X_AUTOPILOT_FROZEN）。")
         return
 
     slot = cfg["slots"][slot_key]
@@ -101,6 +102,12 @@ def run_slot(slot_key: str, dry_run: bool = False) -> None:
 
     # 1) 収集: トレンド発見 → 話題選定 → 深掘り → ブリーフ
     signals, theme = build_signals(cfg, slot, theme_lens, style)
+    # 検索が全滅したら、出典のない数字を投稿しないようスロットを見送る
+    if signals.get("fallback") and cfg["collect"].get("require_sources", False):
+        log("検索が全滅。require_sources=true のため、このスロットは投稿せず見送る。")
+        notify.slack(cfg, f":warning: X Autopilot 見送り({slot_key}) web検索が全滅し出典を取れず")
+        ledger.record(slot_key, theme[:80], "", "", [], "", status="skipped_no_sources")
+        return
     guidance = load_guidance(cfg)
 
     # 2) 生成 + 品質ゲート + 安全ゲートの再生成ループ

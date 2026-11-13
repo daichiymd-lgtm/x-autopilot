@@ -1,8 +1,13 @@
 name: X Autopilot Post
 
-# 2026-08-24: 定期実行を停止。xAI $10課金（日曜22:00 JST evening2と一致）。
-# 投稿本番は note-x-daily-post。解凍は publish.frozen=false と X_AUTOPILOT_FROZEN=0 が必要。
+# 2026-08-24: xAI $10課金で定期実行を停止。
+# 2026-11: 検索を Claude API の web_search に切り替え（xAI は呼ばない）、1日3回で再開。
+# 止めるときは config.yaml の publish.frozen=true か、下の X_AUTOPILOT_FROZEN を "1" に戻す。
 on:
+  schedule:
+    - cron: "17 23 * * *"   # 08:17 JST morning1（速報）
+    - cron: "17 3 * * *"    # 12:17 JST morning2（実用ネタ）
+    - cron: "17 9 * * *"    # 18:17 JST evening2（保存版）
   workflow_dispatch:
     inputs:
       slot:
@@ -39,17 +44,15 @@ jobs:
         id: slot
         run: |
           case "${{ github.event.schedule }}" in
-            "0 23 * * *")  echo "slot=morning1" >> "$GITHUB_OUTPUT" ;;
-            "30 3 * * *")  echo "slot=morning2" >> "$GITHUB_OUTPUT" ;;
-            "0 8 * * *")   echo "slot=afternoon1" >> "$GITHUB_OUTPUT" ;;
-            "30 10 * * *") echo "slot=evening1" >> "$GITHUB_OUTPUT" ;;
-            "0 13 * * *")  echo "slot=evening2" >> "$GITHUB_OUTPUT" ;;
+            "17 23 * * *") echo "slot=morning1" >> "$GITHUB_OUTPUT" ;;
+            "17 3 * * *")  echo "slot=morning2" >> "$GITHUB_OUTPUT" ;;
+            "17 9 * * *")  echo "slot=evening2" >> "$GITHUB_OUTPUT" ;;
             *)             echo "slot=${{ github.event.inputs.slot }}" >> "$GITHUB_OUTPUT" ;;
           esac
 
       - name: Run slot
         env:
-          X_AUTOPILOT_FROZEN: "1"
+          X_AUTOPILOT_FROZEN: "0"
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           X_API_KEY: ${{ secrets.X_API_KEY }}
           X_API_SECRET: ${{ secrets.X_API_SECRET }}
