@@ -83,6 +83,21 @@ def main():
     check("無関係トピックのjaccardが低い", sim2 < 0.2, f"sim={sim2:.2f}")
 
     # 6) 認証情報の有無（警告のみ）
+    # 7) ヘルスチェック: 連続errorでRED / 正常はGREEN
+    from datetime import timedelta
+    from xautopilot import health
+    from xautopilot.config import now_jst
+    now = now_jst()
+    live = {"publish": {"frozen": False, "enabled": True}}
+    errs = [{"ts": (now - timedelta(hours=i)).isoformat(), "status": "error"} for i in range(6)]
+    check("error 6連続で RED", health.analyze(errs, live, now)["level"] == "RED")
+    ok = [{"ts": (now - timedelta(hours=i)).isoformat(), "status": "posted"} for i in range(3)]
+    check("直近投稿成功で GREEN", health.analyze(ok, live, now)["level"] == "GREEN")
+    stale = [{"ts": (now - timedelta(days=10)).isoformat(), "status": "posted"}]
+    check("10日投稿なしで RED", health.analyze(stale, live, now)["level"] == "RED")
+    frz = {"publish": {"frozen": True, "enabled": False}}
+    check("凍結中は RED を鳴らさない", health.analyze(errs, frz, now)["level"] == "FROZEN")
+
     print("\n--- 認証情報（投稿前に要設定） ---")
     for k in ["ANTHROPIC_API_KEY", "XAI_API_KEY", "X_API_KEY", "X_API_SECRET",
               "X_ACCESS_TOKEN", "X_ACCESS_TOKEN_SECRET"]:
