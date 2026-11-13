@@ -31,6 +31,6 @@ jobs:
         run: |
           git config user.name "x-autopilot-bot"
           git config user.email "x-autopilot-bot@users.noreply.github.com"
-          git add data/guidance.json 2>/dev/null || true
+          git add data/guidance.json data/_budget.json 2>/dev/null || true
           git commit -m "chore: update guidance [skip ci]" || echo "no changes"
           git push || echo "push skipped"

@@ -89,6 +89,16 @@ gates:
   dedup_similarity: 0.62             # Jaccard類似度しきい値
   max_regenerate: 1                  # ゲート不合格時の再生成回数
 
+# --- 出費ガード（2026-11 追加・数値は仮置き） ---
+# 1スロットの目安: Grok 最大4回 / Claude 最大12回前後（再生成込み）。5スロット/日で Grok 20・Claude 60。
+# 上限に達したら API を呼ばずに停止し Slack に通知する（budget.py）。回数は data/_budget.json に記録。
+budget:
+  max_grok_calls_per_day: 25
+  max_grok_calls_per_month: 300
+  max_claude_calls_per_day: 80
+  max_claude_calls_per_month: 1500
+  max_consecutive_errors: 3          # 直近この回数が連続で投稿失敗なら止める（0=無効）
+
 # --- 投稿層 ---
 publish:
   frozen: true                       # true = Grokも投稿もしない（2026-08-24 xAI $10停止）
