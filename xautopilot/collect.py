@@ -9,6 +9,7 @@ v2 (2026-06-11): 「おっさんのつぶやき」排除のための3段収集�
 import os
 import requests
 from .config import log
+from . import budget
 
 XAI_RESPONSES_URL = "https://api.x.ai/v1/responses"
 
@@ -36,6 +37,7 @@ def _grok(cfg: dict, sys_prompt: str, user: str, timeout: int = 180) -> tuple[st
     key = os.environ.get("XAI_API_KEY")
     if not key:
         raise RuntimeError("XAI_API_KEY が未設定です")
+    budget.charge(cfg, "grok")  # 上限超過なら呼ばずに停止（BudgetExceeded）
     body = {
         "model": cfg["collect"]["grok_model"],
         "input": [

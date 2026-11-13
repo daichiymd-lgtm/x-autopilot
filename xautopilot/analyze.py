@@ -27,8 +27,9 @@ def _strip_json(text: str) -> str:
 
 
 def _client():
-    from anthropic import Anthropic
-    return Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+    # 呼び出し回数を数える出費ガード付きクライアント（budget.py）
+    from .budget import anthropic_client
+    return anthropic_client()
 
 
 def _loads_lenient(raw: str, cfg: dict = None) -> dict:
