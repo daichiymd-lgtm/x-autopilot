@@ -1,5 +1,8 @@
 # X Autopilot — 海外インテリジェンス自動発信エンジン
 
+> ⛔ **凍結中（2026-08-24〜）**: xAI の $10 課金を受け、cron・Grok 呼び出し・X 投稿・週次学習をすべて停止中。本番の X 投稿は `note-x-daily-post` が担当。
+> 解凍には `config.yaml` の `publish.frozen: false` と 環境変数 `X_AUTOPILOT_FROZEN=0` の**両方**が必要（片方だけでは動かない）。cron も `.github/workflows/*.yml` に戻す必要あり。
+
 **Grok(Live Search) で海外＋日本のシグナルを収集 → Claude で翻訳・分析・ツリー生成 → 自動安全ゲート → X API で1日4回ツリー投稿**する、完全自動の発信ライン。
 
 - 投稿先: **@daichi631056**（daichi/DC 統一人格・X主戦場 / `57_アカウント群総合戦略`）

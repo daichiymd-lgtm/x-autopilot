@@ -6,6 +6,7 @@ APIキーの有無もチェックして表示する。投稿は一切しない�
 実行: python tests/smoke.py
 """
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -29,7 +30,28 @@ def main():
     cfg = load_config()
 
     # 1) config
-    check("config.slots が4スロット", len(cfg["slots"]) == 4, str(list(cfg["slots"])))
+    slots = cfg["slots"]
+    check("config.slots が1つ以上・全てthemeあり",
+          bool(slots) and all(v.get("theme") for v in slots.values()), str(list(slots)))
+    wf = (Path(__file__).resolve().parent.parent / ".github/workflows/post.yml").read_text(encoding="utf-8")
+    m = re.search(r"options:\s*\[([^\]]*)\]", wf)
+    wf_slots = [x.strip() for x in m.group(1).split(",")] if m else []
+    check("post.yml の選択肢 = config.slots", wf_slots == list(slots), str(wf_slots))
+
+    # 1b) 凍結ガード（2026-08-24）: 既定で凍結、両方解除で初めて解凍
+    from xautopilot.config import is_frozen
+    saved = os.environ.pop("X_AUTOPILOT_FROZEN", None)
+    check("既定設定は凍結中", is_frozen(cfg))
+    os.environ["X_AUTOPILOT_FROZEN"] = "0"
+    check("env解除だけでは凍結維持(config frozen=true)", is_frozen(cfg) == bool(cfg["publish"].get("frozen", True)))
+    thawed = {**cfg, "publish": {**cfg["publish"], "frozen": False}}
+    check("config+env両方解除で解凍", not is_frozen(thawed))
+    os.environ["X_AUTOPILOT_FROZEN"] = "1"
+    check("env=1ならconfig解除でも凍結", is_frozen(thawed))
+    if saved is None:
+        os.environ.pop("X_AUTOPILOT_FROZEN", None)
+    else:
+        os.environ["X_AUTOPILOT_FROZEN"] = saved
     check("persona 読み込み", len(read_persona(cfg)) > 100)
 
     # 2) ゲート: NG語検知
