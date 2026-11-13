@@ -45,7 +45,11 @@ thread:
 
 # --- 収集層（Grok web_search・3段収集） ---
 collect:
-  grok_model: "grok-4.3"             # Responses API + web_search tool 対応（2026-06移行）
+  provider: "grok"                   # grok=従来どおり（XAI_API_KEY 必要） / claude=Claude APIのweb_search（xAIを呼ばない）
+  claude_model: "claude-sonnet-4-6"  # provider=claude のときの検索モデル
+  claude_max_searches: 5             # 1コールあたりの検索回数の上限（検索は従量課金）
+  require_sources: true              # true=検索が全滅したら投稿せず見送る（出典のない数字を出さない）
+  grok_model: "grok-4.3"             # provider=grok のときだけ使う
   trend_scan: true                   # true=トレンド起点で話題を発見（v2）。false=旧来の固定テーマ収集
   research_passes: 2                 # 深掘りリサーチのパス数（A=事実数字 / B=実務含意）
   recency_hours: 36                 # フォールバック収集時の鮮度

@@ -110,6 +110,12 @@ def run_slot(slot_key: str, dry_run: bool = False) -> None:
 
     # 1) 収集: トレンド発見 → 話題選定 → 深掘り → ブリーフ
     signals, theme = build_signals(cfg, slot, theme_lens, style)
+    # 検索が全滅したら、出典のない数字を投稿しないようスロットを見送る（collect.require_sources）
+    if signals.get("fallback") and cfg["collect"].get("require_sources", False):
+        log("検索が全滅。require_sources=true のため、このスロットは投稿せず見送る。")
+        notify.slack(cfg, f":warning: X Autopilot 見送り({slot_key}) web検索が全滅し出典を取れず")
+        ledger.record(slot_key, theme[:80], "", "", [], "", status="skipped_no_sources")
+        return
     guidance = load_guidance(cfg)
 
     # 2) 生成 + 品質ゲート + 安全ゲートの再生成ループ

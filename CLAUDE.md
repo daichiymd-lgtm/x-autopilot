@@ -19,6 +19,11 @@
 - `BudgetExceeded` は `BaseException`。`except Exception` のフォールバックで握りつぶさせないため。**`Exception` に変えない**
 - 新しく API を呼ぶ箇所を足すときは、Grok は `budget.charge(cfg, "grok")`、Claude は `budget.anthropic_client()` を通す
 
+## 収集の切り替え（`collect.provider`）
+- `grok`（既定・従来どおり）／`claude`（Claude API の `web_search`。xAI を呼ばない。出費ガードの Claude の回数に入る）
+- `collect.require_sources: true` のあいだ、検索が全滅した回は生成も投稿もせず `skipped_no_sources` で終わる
+- `claude` は実 API では未検証（`tests/test_collect_claude.py` はクライアントを差し替えたテスト）。使う前にドライランで確かめる
+
 ## 構成
 `run.py`（司令塔）→ `collect.py`（Grok）→ `analyze.py`（Claude）→ `gates.py`（安全ゲート）→ `publish.py`（X API）→ `ledger.py`（台帳）。週次の学習は `learn.py`。挙動は `config.yaml` で変える。
 

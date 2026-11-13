@@ -1,4 +1,8 @@
-"""収集層: Grok (xAI) Responses API + web_search でトレンド発見と多段深掘りリサーチ.
+"""収集層: web検索つきLLMでトレンド発見と多段深掘りリサーチ.
+
+検索の担い手は config.yaml の collect.provider で切り替える。
+  - "claude": Claude API の web_search サーバーツール（xAI の課金なし。2026-11 以降の既定）
+  - "grok"  : Grok (xAI) Responses API + web_search（旧来。XAI_API_KEY が必要）
 
 v2 (2026-06-11): 「おっさんのつぶやき」排除のための3段収集に拡張。
   1) scan_trends()   : いま熱い話題を発見（固定テーマではなくトレンド起点）
@@ -57,6 +61,64 @@ def _grok(cfg: dict, sys_prompt: str, user: str, timeout: int = 180) -> tuple[st
     return _extract_text_and_citations(r.json())
 
 
+def _claude_search(cfg: dict, sys_prompt: str, user: str) -> tuple[str, list]:
+    """Claude の web_search サーバーツール 1コールの共通ラッパー。失敗は例外で返す。
+
+    検索は Anthropic 側で実行される。サーバー側のループが上限に達すると
+    stop_reason="pause_turn" で返るので、アシスタントの応答を付けて再送し続きを受け取る。
+    """
+    c = cfg["collect"]
+    client = budget.anthropic_client(cfg)  # 出費ガードを通す（上限超過なら BudgetExceeded で全体停止）
+    tools = [{
+        "type": "web_search_20260209",
+        "name": "web_search",
+        "max_uses": int(c.get("claude_max_searches", 5)),
+    }]
+    messages = [{"role": "user", "content": user}]
+    texts, citations = [], []
+    for _ in range(int(c.get("claude_max_continuations", 3)) + 1):
+        resp = client.messages.create(
+            model=c.get("claude_model", cfg["analyze"]["compose_model"]),
+            max_tokens=4000,
+            system=sys_prompt,
+            tools=tools,
+            messages=messages,
+        )
+        for block in resp.content:
+            if block.type == "text":
+                texts.append(block.text)
+                for cit in getattr(block, "citations", None) or []:
+                    url = getattr(cit, "url", None)
+                    if url:
+                        citations.append(url)
+            elif block.type == "web_search_tool_result":
+                # 成功時は結果のリスト、失敗時は error_code を持つ単一オブジェクト
+                if isinstance(block.content, list):
+                    citations.extend(r.url for r in block.content if getattr(r, "url", None))
+                else:
+                    log(f"web_search エラー: {getattr(block.content, 'error_code', block.content)}")
+        if resp.stop_reason != "pause_turn":
+            break
+        messages = [{"role": "user", "content": user},
+                    {"role": "assistant", "content": resp.content}]
+    if resp.stop_reason == "refusal":
+        raise RuntimeError("Claude が検索リクエストを拒否しました")
+    content = "".join(texts).strip()
+    if not content:
+        raise RuntimeError("Claude web_search の本文が空です")
+    return content, list(dict.fromkeys(citations))
+
+
+def _search(cfg: dict, sys_prompt: str, user: str) -> tuple[str, list]:
+    """collect.provider に応じて検索つきLLMを呼ぶ。返り値は (本文, 出典URLのリスト)。"""
+    provider = cfg["collect"].get("provider", "grok")
+    if provider == "claude":
+        return _claude_search(cfg, sys_prompt, user)
+    if provider == "grok":
+        return _grok(cfg, sys_prompt, user)
+    raise RuntimeError(f"未知の collect.provider: {provider}")
+
+
 # ---------------------------------------------------------------
 # 1) トレンドスキャン: 「いま何が熱いか」を発見する
 # ---------------------------------------------------------------
@@ -86,7 +148,7 @@ def scan_trends(cfg: dict, lens: str) -> dict:
         "・出典: 媒体名"
     )
     try:
-        content, citations = _grok(cfg, sys_prompt, user)
+        content, citations = _search(cfg, sys_prompt, user)
         log(f"トレンドスキャン 完了（{len(content)}字 / 出典{len(citations)}件）")
         return {"raw": content, "citations": citations}
     except Exception as e:
@@ -115,7 +177,7 @@ def deep_research(cfg: dict, topic: str, useful_angle: str) -> dict:
 
     # パスA: 事実と数字
     try:
-        facts, cits_a = _grok(cfg, sys_prompt, (
+        facts, cits_a = _search(cfg, sys_prompt, (
             f"話題: {topic}\n\n"
             "この話題について、web検索で以下を徹底的に集めてください:\n"
             "1. 具体的な数字を最低10個（金額・%・件数・日付・期間。出典つき）\n"
@@ -130,7 +192,7 @@ def deep_research(cfg: dict, topic: str, useful_angle: str) -> dict:
 
     # パスB: 実務への変換
     try:
-        practical, cits_b = _grok(cfg, sys_prompt, (
+        practical, cits_b = _search(cfg, sys_prompt, (
             f"話題: {topic}\n"
             f"読者に役立てる切り口: {useful_angle}\n\n"
             "日本の不動産・金融・AI実務家/投資家がこの話題を『自分ごと』にするための材料をweb検索で集めてください:\n"
@@ -174,7 +236,7 @@ def collect_signals(cfg: dict, theme: str) -> dict:
         "の形で、日本語で簡潔にまとめてください。"
     )
     try:
-        content, citations = _grok(cfg, sys_prompt, user)
+        content, citations = _search(cfg, sys_prompt, user)
         log(f"テーマ収集 完了（本文{len(content)}字 / 出典{len(citations)}件）")
         return {"raw": content, "citations": citations}
     except Exception as e:
