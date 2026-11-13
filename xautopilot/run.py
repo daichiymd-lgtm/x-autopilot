@@ -16,10 +16,9 @@ v2 (2026-06-11): 「おっさんのつぶやき」排除パイプライン。
 """
 import argparse
 import json
-import os
 import traceback
 
-from .config import load_config, load_env, log, ROOT
+from .config import load_config, load_env, log, ROOT, is_frozen
 from . import collect, analyze, gates, publish, ledger, notify, budget
 
 
@@ -80,8 +79,7 @@ def run_slot(slot_key: str, dry_run: bool = False) -> None:
         raise SystemExit(f"未知のスロット: {slot_key}（{list(cfg['slots'])}）")
 
     # 2026-08-24: xAI Stripe $10。投稿は note-x-daily-post。Grok APIは呼ばない。
-    frozen = cfg.get("publish", {}).get("frozen", True)
-    if os.environ.get("X_AUTOPILOT_FROZEN", "1") != "0" or frozen:
+    if is_frozen(cfg):
         log("凍結中: xAI/Grok も X API 投稿もしない（7/8裁定・8/24領収書）。本番Xは note-x-daily-post。")
         return
 
@@ -201,7 +199,8 @@ def run_slot(slot_key: str, dry_run: bool = False) -> None:
         result = publish.post_thread(cfg, tweets, cta)
     except Exception as e:
         notify.slack(cfg, f":x: X Autopilot 投稿失敗({slot_key}): {e}")
-        ledger.record(slot_key, theme[:80], thread.get("topic", ""), thread.get("hook", ""), [], "", status="error")
+        ledger.record(slot_key, theme[:80], thread.get("topic", ""), thread.get("hook", ""), [], "",
+                      status="error", error=f"{type(e).__name__}: {e}")
         raise
     ledger.record(slot_key, theme[:80], thread.get("topic", ""), thread.get("hook", ""),
                   result["ids"], result["url"], status="posted")

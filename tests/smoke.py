@@ -6,6 +6,7 @@ APIキーの有無もチェックして表示する。投稿は一切しない�
 実行: python tests/smoke.py
 """
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -29,9 +30,28 @@ def main():
     cfg = load_config()
 
     # 1) config
+    slots = cfg["slots"]
+    check("config.slots が1つ以上・全てthemeあり",
+          bool(slots) and all(v.get("theme") for v in slots.values()), str(list(slots)))
     wf = (Path(__file__).resolve().parent.parent / ".github/workflows/post.yml").read_text(encoding="utf-8")
-    missing = [k for k in cfg["slots"] if k not in wf]
-    check("config.slots が post.yml の選択肢と一致", not missing, f"{list(cfg['slots'])} 不足={missing}")
+    m = re.search(r"options:\s*\[([^\]]*)\]", wf)
+    wf_slots = [x.strip() for x in m.group(1).split(",")] if m else []
+    check("post.yml の選択肢 = config.slots", wf_slots == list(slots), str(wf_slots))
+
+    # 1b) 凍結ガード（2026-08-24）: 既定で凍結、両方解除で初めて解凍
+    from xautopilot.config import is_frozen
+    saved = os.environ.pop("X_AUTOPILOT_FROZEN", None)
+    check("既定設定は凍結中", is_frozen(cfg))
+    os.environ["X_AUTOPILOT_FROZEN"] = "0"
+    check("env解除だけでは凍結維持(config frozen=true)", is_frozen(cfg) == bool(cfg["publish"].get("frozen", True)))
+    thawed = {**cfg, "publish": {**cfg["publish"], "frozen": False}}
+    check("config+env両方解除で解凍", not is_frozen(thawed))
+    os.environ["X_AUTOPILOT_FROZEN"] = "1"
+    check("env=1ならconfig解除でも凍結", is_frozen(thawed))
+    if saved is None:
+        os.environ.pop("X_AUTOPILOT_FROZEN", None)
+    else:
+        os.environ["X_AUTOPILOT_FROZEN"] = saved
     check("persona 読み込み", len(read_persona(cfg)) > 100)
 
     # 2) ゲート: NG語検知
@@ -87,7 +107,22 @@ def main():
     check("現行の台帳では停止状態（解凍しても即課金しない）",
           budget.circuit_open(cfg, ledger._load().get("posts", [])))
 
-    # 7) 認証情報の有無（警告のみ）
+    # 7) ヘルスチェック: 連続errorでRED / 正常はGREEN
+    from datetime import timedelta
+    from xautopilot import health
+    from xautopilot.config import now_jst
+    now = now_jst()
+    live = {"publish": {"frozen": False, "enabled": True}}
+    errs = [{"ts": (now - timedelta(hours=i)).isoformat(), "status": "error"} for i in range(6)]
+    check("error 6連続で RED", health.analyze(errs, live, now)["level"] == "RED")
+    ok = [{"ts": (now - timedelta(hours=i)).isoformat(), "status": "posted"} for i in range(3)]
+    check("直近投稿成功で GREEN", health.analyze(ok, live, now)["level"] == "GREEN")
+    stale = [{"ts": (now - timedelta(days=10)).isoformat(), "status": "posted"}]
+    check("10日投稿なしで RED", health.analyze(stale, live, now)["level"] == "RED")
+    frz = {"publish": {"frozen": True, "enabled": False}}
+    check("凍結中は RED を鳴らさない", health.analyze(errs, frz, now)["level"] == "FROZEN")
+
+    # 8) 認証情報の有無（警告のみ）
     print("\n--- 認証情報（投稿前に要設定） ---")
     for k in ["ANTHROPIC_API_KEY", "XAI_API_KEY", "X_API_KEY", "X_API_SECRET",
               "X_ACCESS_TOKEN", "X_ACCESS_TOKEN_SECRET"]:

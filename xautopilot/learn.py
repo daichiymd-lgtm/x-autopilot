@@ -5,7 +5,7 @@
 """
 import os
 import json
-from .config import load_config, load_env, log, ROOT, now_jst
+from .config import load_config, load_env, log, ROOT, now_jst, is_frozen
 from . import ledger, publish, notify
 
 
@@ -25,6 +25,9 @@ def _score(metrics: dict) -> int:
 def run_learning() -> None:
     load_env()
     cfg = load_config()
+    if is_frozen(cfg):
+        log("凍結中: 週次学習もX API/Claudeを呼ばない（2026-08-24停止）。")
+        return
     if not cfg["learn"].get("pull_engagement", True):
         log("学習: pull_engagement=false のためスキップ")
         return
