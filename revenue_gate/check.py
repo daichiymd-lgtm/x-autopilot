@@ -75,7 +75,8 @@ def volume_status(lane, floor):
     for r in lane.get("running") or []:
         t, a = r.get("target_per_day"), r.get("actual_per_day")
         if r.get("stalled"):
-            text, short = "止まっている" + (f"（{r['note']}）" if r.get("note") else ""), True
+            text = (f"目標{t}→" if t is not None else "") + "止まっている" + (f"（{r['note']}）" if r.get("note") else "")
+            short = True
         elif t is None and a is None:
             text, short = "目標・実績とも未確認", False
         else:

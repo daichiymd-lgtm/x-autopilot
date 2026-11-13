@@ -51,6 +51,8 @@ def main():
     vs = g.volume_status(v, 30)
     ok("段に効かない作業でも、数が出ていれば未達にしない", vs[0][2] is False, str(vs[0]))
     ok("目標未達と停止を挙げる", [x[2] for x in vs] == [False, True, True, False])
+    st5 = g.volume_status(dict(v, running=[{"work": "量産", "stage": "exposure", "target_per_day": 5000, "stalled": True}]), 30)
+    ok("止まっている数にも目標を出す", st5[0][1].startswith("目標5000→止まっている") and st5[0][2] is True, st5[0][1])
     ok("効果判定は保留でも数は続ける", "数は続ける" in vs[3][1] and vs[3][2] is False)
     ok("止まっている数が効く段を返す", g.starved_stages(v) == {"visit", "exposure"})
     ok("出力に「止める提案」を出さない", "止める提案" not in g.render(g.evaluate(yaml.safe_load(g.EXAMPLE.read_text(encoding="utf-8")), date(2026, 1, 15)), date(2026, 1, 15)))

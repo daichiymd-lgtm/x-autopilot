@@ -24,7 +24,7 @@ lanes:
     stuck_override: prepurchase
     override_reason: "カートを取れていない出品には訪問が来ない。訪問不足の原因が価格にある"
     running:
-      - {work: "出品数を増やす", stage: exposure, stalled: true, note: "管理画面のログイン切れ"}
+      - {work: "出品数を増やす", stage: exposure, target_per_day: 5000, stalled: true, note: "管理画面のログイン切れ"}
     next:
       - "利益が残る商品だけ最安値に合わせる"
     judgment: {metric: "カート取得率が0%を超えた商品数", set: "2026-01-15", date: "2026-01-29"}
