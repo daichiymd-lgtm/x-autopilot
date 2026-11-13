@@ -20,7 +20,7 @@ import os
 import traceback
 
 from .config import load_config, load_env, log, ROOT
-from . import collect, analyze, gates, publish, ledger, notify
+from . import collect, analyze, gates, publish, ledger, notify, budget
 
 
 def load_guidance(cfg: dict) -> dict:
@@ -93,6 +93,17 @@ def run_slot(slot_key: str, dry_run: bool = False) -> None:
         pub["enabled"] = False
     log(f"=== スロット {slot_key} 開始 / mode={pub['mode']} / enabled={pub['enabled']} ===")
     log(f"レンズ: {theme_lens[:60]}…")
+
+    # 出費ガード①: 直近が連続失敗なら API を1回も呼ばずに止める
+    # （2026-06-25〜08-24、投稿0件のまま272回 Grok/Claude を呼び続けた教訓）
+    if budget.circuit_open(cfg, ledger._load().get("posts", [])):
+        n = budget._limits(cfg)["max_consecutive_errors"]
+        msg = (f"直近{n}回連続で投稿失敗。API を呼ばずに停止します。"
+               "原因を直したら config.yaml の budget.max_consecutive_errors を一時的に 0 にして1回試してください。")
+        log("⛔ " + msg)
+        notify.slack(cfg, f":octagonal_sign: X Autopilot 自動停止({slot_key}) {msg}")
+        raise SystemExit(1)
+    budget.log_summary(cfg)
 
     # 同日同スロット二重投稿ガード（02-Mistakes 2026-06-09）
     if pub["enabled"] and ledger.already_posted_this_slot_today(slot_key):
@@ -213,6 +224,14 @@ def main():
         run_slot(args.slot, dry_run=args.dry_run)
     except SystemExit:
         raise
+    except budget.BudgetExceeded as e:
+        # 出費ガード②: 呼び出し回数の上限。フォールバックせず実行全体を止める
+        log(f"⛔ 出費ガードで停止: {e}")
+        try:
+            notify.slack(load_config(), f":octagonal_sign: X Autopilot 上限停止({args.slot}): {e}")
+        except Exception:
+            pass
+        raise SystemExit(1)
     except Exception as e:
         log("致命的エラー:\n" + traceback.format_exc())
         try:

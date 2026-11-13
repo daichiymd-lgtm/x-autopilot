@@ -66,8 +66,8 @@ def run_learning() -> None:
 
     new_guidance = cur
     try:
-        from anthropic import Anthropic
-        c = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+        from .budget import anthropic_client
+        c = anthropic_client(cfg)
         prompt = (
             "あなたはXグロース分析者。以下は同一アカウントの投稿スコア"
             "（インプレ＋反応の重み付き。ブックマーク=有用性の最強シグナルとして×10）。\n\n"

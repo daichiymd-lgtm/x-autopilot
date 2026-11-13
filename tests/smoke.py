@@ -12,7 +12,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from xautopilot.config import load_config, load_env, log, read_persona
-from xautopilot import gates, publish, ledger
+from xautopilot import gates, publish, ledger, budget
 
 FAIL = []
 
@@ -29,7 +29,9 @@ def main():
     cfg = load_config()
 
     # 1) config
-    check("config.slots が4スロット", len(cfg["slots"]) == 4, str(list(cfg["slots"])))
+    wf = (Path(__file__).resolve().parent.parent / ".github/workflows/post.yml").read_text(encoding="utf-8")
+    missing = [k for k in cfg["slots"] if k not in wf]
+    check("config.slots が post.yml の選択肢と一致", not missing, f"{list(cfg['slots'])} 不足={missing}")
     check("persona 読み込み", len(read_persona(cfg)) > 100)
 
     # 2) ゲート: NG語検知
@@ -60,7 +62,32 @@ def main():
     sim2 = ledger.jaccard("海外REITの延滞率", "猫の写真の撮り方")
     check("無関係トピックのjaccardが低い", sim2 < 0.2, f"sim={sim2:.2f}")
 
-    # 6) 認証情報の有無（警告のみ）
+    # 6) 出費ガード（一時ファイルで検証・本物の _budget.json は触らない）
+    import tempfile
+    orig = budget.BUDGET_FILE
+    with tempfile.TemporaryDirectory() as td:
+        budget.BUDGET_FILE = Path(td) / "_budget.json"
+        tiny = {"budget": {"max_grok_calls_per_day": 2, "max_grok_calls_per_month": 99,
+                           "max_claude_calls_per_day": 99, "max_claude_calls_per_month": 99,
+                           "max_consecutive_errors": 3}}
+        budget.charge(tiny, "grok"); budget.charge(tiny, "grok")
+        try:
+            budget.charge(tiny, "grok"); stopped = False
+        except budget.BudgetExceeded:
+            stopped = True
+        check("Grok日次上限で停止する", stopped, budget.summary(tiny))
+        check("上限超過は except Exception で握りつぶされない",
+              not issubclass(budget.BudgetExceeded, Exception))
+    budget.BUDGET_FILE = orig
+    errs = [{"status": "error"}] * 3
+    check("連続3回失敗で自動停止", budget.circuit_open(tiny, errs))
+    check("成功を挟めば停止しない", not budget.circuit_open(tiny, [{"status": "error"}, {"status": "posted"}, {"status": "error"}]))
+    check("品質スキップは失敗に数えない",
+          not budget.circuit_open(tiny, [{"status": "error"}, {"status": "skipped_quality"}, {"status": "error"}]))
+    check("現行の台帳では停止状態（解凍しても即課金しない）",
+          budget.circuit_open(cfg, ledger._load().get("posts", [])))
+
+    # 7) 認証情報の有無（警告のみ）
     print("\n--- 認証情報（投稿前に要設定） ---")
     for k in ["ANTHROPIC_API_KEY", "XAI_API_KEY", "X_API_KEY", "X_API_SECRET",
               "X_ACCESS_TOKEN", "X_ACCESS_TOKEN_SECRET"]:
