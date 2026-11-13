@@ -95,7 +95,8 @@ gates:
 
 # --- 投稿層 ---
 publish:
-  frozen: false                      # true = 収集も投稿もしない（2026-08-24 凍結 → 2026-11 Claude検索に切替えて再開）
+  frozen: true                       # true = 収集も投稿もしない。X API のクレジットを補充したら false にする
+                                     # （2026-06-25 以降の投稿は全て 402 credits depleted で失敗。凍結中は API を一切呼ばない）
   enabled: true                      # false = ドライラン（生成のみ・投稿しない）
   mode: "direct"                     # direct=即投稿 / buffer=Slack予告30分後 / draft=下書き配信のみ
   buffer_minutes: 30                 # mode=buffer のときの予告猶予

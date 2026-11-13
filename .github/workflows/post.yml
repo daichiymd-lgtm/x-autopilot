@@ -1,8 +1,9 @@
 name: X Autopilot Post
 
 # 2026-08-24: xAI $10課金で定期実行を停止。
-# 2026-11: 検索を Claude API の web_search に切り替え（xAI は呼ばない）、1日3回で再開。
-# 止めるときは config.yaml の publish.frozen=true か、下の X_AUTOPILOT_FROZEN を "1" に戻す。
+# 2026-11: 検索を Claude API の web_search に切り替え（xAI は呼ばない）。予定は1日3回。
+# スイッチは config.yaml の publish.frozen ひとつ。true のあいだは起動しても API を呼ばずに終わる。
+# X API のクレジットを補充してから false にする（2026-06-25 以降は 402 credits depleted で全て失敗）。
 on:
   schedule:
     - cron: "17 23 * * *"   # 08:17 JST morning1（速報）
