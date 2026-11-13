@@ -1,0 +1,102 @@
+# 収益ゲート台帳の見本（架空の数字）。
+# このリポジトリは公開のため、実際の台帳 lanes.yaml と結果 TODAY.md は .gitignore で除外している。
+# 使い方: この見本を lanes.yaml に写して実数を入れる（正本は Vault 側に置く）。
+#
+# 書き方の決まり
+# - 数字は出典ファイルか読戻しで確かめたものだけ。取れないものは value: null（＝未確認）。推測で埋めない。
+# - 各数字に date（観測日）と source（出典）を必ず付ける。
+# - running は毎日回している「数」。target_per_day（目標）と actual_per_day（実績）を書く。
+#   止まっているものは stalled: true。数は止める対象にしない（詰まっている段の作業は next に足す）。
+
+as_of: "2026-01-15"
+visit_floor_per_week: 30     # 週の訪問がこれ未満なら文言の効果検証をしない
+stale_after_days: 7          # これより古い数字は「古い」と表示する
+owner_queue_max: 3           # 本人に同時に出すボタンの上限
+
+lanes:
+  - id: shop
+    name: ネットショップ
+    stages:
+      exposure:    {value: 1200, unit: "公開中の出品", date: "2026-01-14", source: "管理画面の読戻し"}
+      visit:       {value: 60, per_days: 30, unit: "セッション", date: "2026-01-14", source: "ビジネスレポート"}
+      prepurchase: {value: 0, unit: "カート取得率が0%を超えた行", date: "2026-01-14", source: "同上"}
+      cash:        {value: 0, unit: "注文", date: "2026-01-14", source: "同上"}
+    stuck_override: prepurchase
+    override_reason: "カートを取れていない出品には訪問が来ない。訪問不足の原因が価格にある"
+    running:
+      - {work: "出品数を増やす", stage: exposure, target_per_day: 5000, stalled: true, note: "管理画面のログイン切れ"}
+    next:
+      - "利益が残る商品だけ最安値に合わせる"
+    judgment: {metric: "カート取得率が0%を超えた商品数", set: "2026-01-15", date: "2026-01-29"}
+
+  - id: kit
+    name: 有料キット
+    stages:
+      exposure:    {value: 0, unit: "直接案内の送付数", date: "2026-01-14", source: "集計表"}
+      visit:       {value: 40, per_days: null, unit: "PV", date: "2026-01-14", source: "統計（期間は未確認）"}
+      prepurchase: {value: null, unit: "購入ページ到達", date: null, source: "未取得"}
+      cash:        {value: null, unit: "購入", date: null, source: "未取得"}
+    running:
+      - {work: "既存記事の本文点検", stage: none, target_per_day: 8, actual_per_day: 8}
+    next:
+      - "宛先が入り次第、1日5通の直接案内を送る"
+    judgment: {metric: "購入1件", set: "2026-01-15", date: "2026-01-29"}
+
+  - id: prints
+    name: デジタル作品
+    stages:
+      exposure:    {value: 0, per_days: 30, unit: "検索経由の訪問", date: "2026-01-14", source: "ショップ統計"}
+      visit:       {value: 10, per_days: 30, unit: "訪問", date: "2026-01-14", source: "同上"}
+      prepurchase: {value: null, unit: "カート追加", date: null, source: "未取得"}
+      cash:        {value: 0, unit: "注文", date: "2026-01-14", source: "同上"}
+    running:
+      - {work: "説明文の修正と7日判定", stage: none, effect_test: true, target_per_day: 3, actual_per_day: 3}
+    next:
+      - "写真を増やす、セットを作る、下書きを公開する"
+    judgment: {metric: "検索経由の訪問が0を超える", set: "2026-01-15", date: "2026-01-29"}
+
+  - id: blog
+    name: ブログ
+    stages:
+      exposure:    {value: null, unit: "検索表示回数", date: null, source: "未取得"}
+      visit:       {value: 26, per_days: 28, unit: "検索クリック", date: "2026-01-10", source: "Search Console"}
+      prepurchase: {value: null, unit: "広告クリック", date: null, source: "未取得"}
+      cash:        {value: 0, unit: "確定報酬（円）", date: "2026-01-10", source: "ASP管理画面"}
+    running:
+      - {work: "題の改善", stage: visit, target_per_day: 2, actual_per_day: 1}
+    next:
+      - "表示回数があるのにクリックが少ない記事の題を直す"
+    judgment: {metric: "検索クリック（28日）", set: "2026-01-15", date: "2026-01-29"}
+
+# unlocks の stage は「この依頼が通るとAIが着手できる作業の段」
+owner_asks:
+  - id: APPROVE
+    ask: "包括承認に1行で返事する"
+    kind: decision
+    minutes: 1
+    since: "2026-01-13"
+    unlocks: [{lane: shop, stage: prepurchase}, {lane: prints, stage: exposure}]
+  - id: LOGIN
+    ask: "切れているログインをまとめて入り直す"
+    kind: login
+    minutes: 15
+    since: "2026-01-09"
+    unlocks: [{lane: shop, stage: prepurchase}, {lane: blog, stage: visit}]
+  - id: CSV
+    ask: "直接案内の宛先を30行入れる"
+    kind: work
+    minutes: 25
+    since: "2026-01-02"
+    unlocks: [{lane: kit, stage: exposure}]
+  - id: ROTATE
+    ask: "管理画面のパスワードを変える"
+    kind: security
+    minutes: 3
+    since: "2026-01-09"
+    unlocks: []
+  - id: MORE
+    ask: "出品を増やす仕組みの切替方法を決める"
+    kind: decision
+    minutes: null     # 所要が未確認でも、止まっている数を動かす依頼は本人のボタンに入る
+    since: "2026-01-11"
+    unlocks: [{lane: shop, stage: exposure}]

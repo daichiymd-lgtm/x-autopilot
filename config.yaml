@@ -45,7 +45,7 @@ thread:
 
 # --- 収集層（Grok web_search・3段収集） ---
 collect:
-  provider: "claude"                 # claude=Claude APIのweb_search（xAI課金なし） / grok=旧来のGrok（XAI_API_KEY 必要）
+  provider: "grok"                   # grok=従来どおり（XAI_API_KEY 必要） / claude=Claude APIのweb_search（xAIを呼ばない）
   claude_model: "claude-sonnet-4-6"  # provider=claude のときの検索モデル
   claude_max_searches: 5             # 1コールあたりの検索回数の上限（検索は従量課金）
   require_sources: true              # true=検索が全滅したら投稿せず見送る（出典のない数字を出さない）
@@ -93,11 +93,20 @@ gates:
   dedup_similarity: 0.62             # Jaccard類似度しきい値
   max_regenerate: 1                  # ゲート不合格時の再生成回数
 
+# --- 出費ガード（2026-11 追加・数値は仮置き） ---
+# 1スロットの目安: Grok 最大4回 / Claude 最大12回前後（再生成込み）。5スロット/日で Grok 20・Claude 60。
+# 上限に達したら API を呼ばずに停止し Slack に通知する（budget.py）。回数は data/_budget.json に記録。
+budget:
+  max_grok_calls_per_day: 25
+  max_grok_calls_per_month: 300
+  max_claude_calls_per_day: 80
+  max_claude_calls_per_month: 1500
+  max_consecutive_errors: 3          # 直近この回数が連続で投稿失敗なら止める（0=無効）
+
 # --- 投稿層 ---
 publish:
-  frozen: true                       # true = 収集も投稿もしない。X API のクレジットを補充したら false にする
-                                     # （2026-06-25 以降の投稿は全て 402 credits depleted で失敗。凍結中は API を一切呼ばない）
-  enabled: true                      # false = ドライラン（生成のみ・投稿しない）
+  frozen: true                       # true = Grokも投稿もしない（2026-08-24 xAI $10停止）
+  enabled: false                     # false = ドライラン（生成のみ・投稿しない）
   mode: "direct"                     # direct=即投稿 / buffer=Slack予告30分後 / draft=下書き配信のみ
   buffer_minutes: 30                 # mode=buffer のときの予告猶予
 

@@ -13,6 +13,7 @@ v2 (2026-06-11): 「おっさんのつぶやき」排除のための3段収集�
 import os
 import requests
 from .config import log
+from . import budget
 
 XAI_RESPONSES_URL = "https://api.x.ai/v1/responses"
 
@@ -40,6 +41,7 @@ def _grok(cfg: dict, sys_prompt: str, user: str, timeout: int = 180) -> tuple[st
     key = os.environ.get("XAI_API_KEY")
     if not key:
         raise RuntimeError("XAI_API_KEY が未設定です")
+    budget.charge(cfg, "grok")  # 上限超過なら呼ばずに停止（BudgetExceeded）
     body = {
         "model": cfg["collect"]["grok_model"],
         "input": [
@@ -65,9 +67,8 @@ def _claude_search(cfg: dict, sys_prompt: str, user: str) -> tuple[str, list]:
     検索は Anthropic 側で実行される。サーバー側のループが上限に達すると
     stop_reason="pause_turn" で返るので、アシスタントの応答を付けて再送し続きを受け取る。
     """
-    from anthropic import Anthropic
     c = cfg["collect"]
-    client = Anthropic()
+    client = budget.anthropic_client(cfg)  # 出費ガードを通す（上限超過なら BudgetExceeded で全体停止）
     tools = [{
         "type": "web_search_20260209",
         "name": "web_search",

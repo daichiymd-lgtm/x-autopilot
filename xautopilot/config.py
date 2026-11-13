@@ -47,6 +47,17 @@ def load_config() -> dict:
         return yaml.safe_load(f)
 
 
+def is_frozen(cfg: dict) -> bool:
+    """凍結判定（2026-08-24 xAI $10課金で停止）。
+
+    解凍には config の publish.frozen=false と 環境変数 X_AUTOPILOT_FROZEN=0 の両方が必要。
+    どちらか片方でも凍結側なら True（課金APIを一切呼ばない）。
+    """
+    frozen_cfg = cfg.get("publish", {}).get("frozen", True)
+    frozen_env = os.environ.get("X_AUTOPILOT_FROZEN", "1") != "0"
+    return bool(frozen_cfg) or frozen_env
+
+
 def get_env(key: str, required: bool = False, default=None):
     v = os.environ.get(key, default)
     if required and not v:

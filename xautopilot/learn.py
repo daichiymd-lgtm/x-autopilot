@@ -5,7 +5,7 @@
 """
 import os
 import json
-from .config import load_config, load_env, log, ROOT, now_jst
+from .config import load_config, load_env, log, ROOT, now_jst, is_frozen
 from . import ledger, publish, notify
 
 
@@ -25,6 +25,9 @@ def _score(metrics: dict) -> int:
 def run_learning() -> None:
     load_env()
     cfg = load_config()
+    if is_frozen(cfg):
+        log("凍結中: 週次学習もX API/Claudeを呼ばない（2026-08-24停止）。")
+        return
     if not cfg["learn"].get("pull_engagement", True):
         log("学習: pull_engagement=false のためスキップ")
         return
@@ -66,8 +69,8 @@ def run_learning() -> None:
 
     new_guidance = cur
     try:
-        from anthropic import Anthropic
-        c = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+        from .budget import anthropic_client
+        c = anthropic_client(cfg)
         prompt = (
             "あなたはXグロース分析者。以下は同一アカウントの投稿スコア"
             "（インプレ＋反応の重み付き。ブックマーク=有用性の最強シグナルとして×10）。\n\n"

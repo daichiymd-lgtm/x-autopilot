@@ -16,11 +16,10 @@ v2 (2026-06-11): 「おっさんのつぶやき」排除パイプライン。
 """
 import argparse
 import json
-import os
 import traceback
 
-from .config import load_config, load_env, log, ROOT
-from . import collect, analyze, gates, publish, ledger, notify
+from .config import load_config, load_env, log, ROOT, is_frozen
+from . import collect, analyze, gates, publish, ledger, notify, budget
 
 
 def load_guidance(cfg: dict) -> dict:
@@ -69,7 +68,7 @@ def build_signals(cfg: dict, slot: dict, theme_lens: str, style: str) -> tuple:
     # フォールバック: 旧来のテーマ起点収集
     signals = collect.collect_signals(cfg, theme_lens)
     if signals.get("fallback"):
-        log("⚠️ web検索が全滅: 出典なし（fallback）")
+        log("⚠️ Grok全滅: Claude単体でテーマからスレッドを生成")
     return signals, f"{theme_lens}\n\n【この投稿の形式・モード】{style}"
 
 
@@ -79,11 +78,9 @@ def run_slot(slot_key: str, dry_run: bool = False) -> None:
     if slot_key not in cfg["slots"]:
         raise SystemExit(f"未知のスロット: {slot_key}（{list(cfg['slots'])}）")
 
-    # 凍結スイッチ: config の publish.frozen と環境変数 X_AUTOPILOT_FROZEN の両方を解かないと動かない。
-    # 2026-08-24 に xAI の課金（$10）で凍結。2026-11 に検索を Claude へ切り替えて再開（xAI は呼ばない）。
-    frozen = cfg.get("publish", {}).get("frozen", True)
-    if os.environ.get("X_AUTOPILOT_FROZEN", "1") != "0" or frozen:
-        log("凍結中: 収集も X API 投稿もしない（publish.frozen / X_AUTOPILOT_FROZEN）。")
+    # 2026-08-24: xAI Stripe $10。投稿は note-x-daily-post。Grok APIは呼ばない。
+    if is_frozen(cfg):
+        log("凍結中: xAI/Grok も X API 投稿もしない（7/8裁定・8/24領収書）。本番Xは note-x-daily-post。")
         return
 
     slot = cfg["slots"][slot_key]
@@ -95,6 +92,17 @@ def run_slot(slot_key: str, dry_run: bool = False) -> None:
     log(f"=== スロット {slot_key} 開始 / mode={pub['mode']} / enabled={pub['enabled']} ===")
     log(f"レンズ: {theme_lens[:60]}…")
 
+    # 出費ガード①: 直近が連続失敗なら API を1回も呼ばずに止める
+    # （2026-06-25〜08-24、投稿0件のまま272回 Grok/Claude を呼び続けた教訓）
+    if budget.circuit_open(cfg, ledger._load().get("posts", [])):
+        n = budget._limits(cfg)["max_consecutive_errors"]
+        msg = (f"直近{n}回連続で投稿失敗。API を呼ばずに停止します。"
+               "原因を直したら config.yaml の budget.max_consecutive_errors を一時的に 0 にして1回試してください。")
+        log("⛔ " + msg)
+        notify.slack(cfg, f":octagonal_sign: X Autopilot 自動停止({slot_key}) {msg}")
+        raise SystemExit(1)
+    budget.log_summary(cfg)
+
     # 同日同スロット二重投稿ガード（02-Mistakes 2026-06-09）
     if pub["enabled"] and ledger.already_posted_this_slot_today(slot_key):
         log("同日同スロットで投稿済み。スキップ。")
@@ -102,7 +110,7 @@ def run_slot(slot_key: str, dry_run: bool = False) -> None:
 
     # 1) 収集: トレンド発見 → 話題選定 → 深掘り → ブリーフ
     signals, theme = build_signals(cfg, slot, theme_lens, style)
-    # 検索が全滅したら、出典のない数字を投稿しないようスロットを見送る
+    # 検索が全滅したら、出典のない数字を投稿しないようスロットを見送る（collect.require_sources）
     if signals.get("fallback") and cfg["collect"].get("require_sources", False):
         log("検索が全滅。require_sources=true のため、このスロットは投稿せず見送る。")
         notify.slack(cfg, f":warning: X Autopilot 見送り({slot_key}) web検索が全滅し出典を取れず")
@@ -197,7 +205,8 @@ def run_slot(slot_key: str, dry_run: bool = False) -> None:
         result = publish.post_thread(cfg, tweets, cta)
     except Exception as e:
         notify.slack(cfg, f":x: X Autopilot 投稿失敗({slot_key}): {e}")
-        ledger.record(slot_key, theme[:80], thread.get("topic", ""), thread.get("hook", ""), [], "", status="error")
+        ledger.record(slot_key, theme[:80], thread.get("topic", ""), thread.get("hook", ""), [], "",
+                      status="error", error=f"{type(e).__name__}: {e}")
         raise
     ledger.record(slot_key, theme[:80], thread.get("topic", ""), thread.get("hook", ""),
                   result["ids"], result["url"], status="posted")
@@ -220,6 +229,14 @@ def main():
         run_slot(args.slot, dry_run=args.dry_run)
     except SystemExit:
         raise
+    except budget.BudgetExceeded as e:
+        # 出費ガード②: 呼び出し回数の上限。フォールバックせず実行全体を止める
+        log(f"⛔ 出費ガードで停止: {e}")
+        try:
+            notify.slack(load_config(), f":octagonal_sign: X Autopilot 上限停止({args.slot}): {e}")
+        except Exception:
+            pass
+        raise SystemExit(1)
     except Exception as e:
         log("致命的エラー:\n" + traceback.format_exc())
         try:
