@@ -1,5 +1,8 @@
 # X Autopilot — 海外インテリジェンス自動発信エンジン
 
+> ⛔ **凍結中（2026-08-24〜）**: xAI の $10 課金を受け、cron・Grok 呼び出し・X 投稿・週次学習をすべて停止中。本番の X 投稿は `note-x-daily-post` が担当。
+> 解凍には `config.yaml` の `publish.frozen: false` と 環境変数 `X_AUTOPILOT_FROZEN=0` の**両方**が必要（片方だけでは動かない）。cron も `.github/workflows/*.yml` に戻す必要あり。
+
 **Grok(Live Search) で海外＋日本のシグナルを収集 → Claude で翻訳・分析・ツリー生成 → 自動安全ゲート → X API で1日4回ツリー投稿**する、完全自動の発信ライン。
 
 - 投稿先: **@daichi631056**（daichi/DC 統一人格・X主戦場 / `57_アカウント群総合戦略`）
@@ -114,6 +117,12 @@ python -m xautopilot.run --slot morning1 --dry-run   # 実収集・実生成、�
 - **合計 月$15〜45**
 
 ---
+
+## 稼働ヘルスチェック（日次・API課金ゼロ）
+2026-06-25 を最後に投稿成功が途絶え、7〜8月に error が272件積み上がっても気づけなかった。これを受けて、見直しを「週次の人力確認」から「日次の自動確認」に変更した。
+- `python -m xautopilot.health` … 台帳だけを読み、🔴RED（error 5連続 / 最終投稿から3日超）・🟡AMBER（7日成功率50%未満 / 失敗理由が未記録）・🟢GREEN・⚪FROZEN を判定
+- `.github/workflows/health.yml` … 毎日 07:45 JST に実行。RED なら Slack 通知＋ジョブ失敗。凍結中は鳴らさず「解凍前に要解消」として表示だけする
+- 今後の error は台帳の `error` 欄に失敗理由（例外の型＋メッセージ）を記録する
 
 ## トラブルシュート
 | 症状 | 対処 |

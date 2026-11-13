@@ -1,0 +1,43 @@
+name: X Autopilot Health Check
+
+# 台帳だけを読む稼働監視（API課金ゼロ・コミットなし）。
+# 2026-06-25以降の無投稿・error 272件の放置を受け、見直しを「週次の人力」→「日次の自動」に上げる。
+# 毎日 07:45 JST（22:45 UTC）。RED なら Slack 通知＋ジョブ失敗（GitHub からメールが届く）。
+on:
+  schedule:
+    - cron: '45 22 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install PyYAML requests python-dotenv
+      - name: Health check
+        id: hc
+        run: |
+          set +e
+          python -m xautopilot.health --out report.md --strict
+          echo "code=$?" >> "$GITHUB_OUTPUT"
+          cat report.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Notify Slack on RED
+        if: steps.hc.outputs.code != '0'
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_DM_CHANNEL: ${{ secrets.SLACK_DM_CHANNEL }}
+        run: |
+          python - <<'PY'
+          from xautopilot.config import load_config
+          from xautopilot import notify
+          notify.slack(load_config(), ":rotating_light: X Autopilot ヘルスチェック RED\n\n" + open("report.md", encoding="utf-8").read()[:2500])
+          PY
+      - name: Fail on RED
+        if: steps.hc.outputs.code != '0'
+        run: exit 1
