@@ -19,7 +19,7 @@ import json
 import traceback
 
 from .config import load_config, load_env, log, ROOT, is_frozen
-from . import collect, analyze, gates, publish, ledger, notify
+from . import collect, analyze, gates, publish, ledger, notify, breaker
 
 
 def load_guidance(cfg: dict) -> dict:
@@ -96,6 +96,25 @@ def run_slot(slot_key: str, dry_run: bool = False) -> None:
     if pub["enabled"] and ledger.already_posted_this_slot_today(slot_key):
         log("同日同スロットで投稿済み。スキップ。")
         return
+
+    # 0) 課金ブレーカー（2026-06-25〜08-24 の 402 空回り300回の再発防止）
+    #    投稿する回だけ見る。ドライランは投稿しないので 402 と無関係。
+    if pub["enabled"]:
+        if breaker.is_tripped(cfg):
+            log("ブレーカー作動中: X API の 402 が連続。Grok/Claude を呼ばずに終了。"
+                "支払い確認後 `python -m xautopilot.breaker --reset` で解除。")
+            return
+        try:
+            breaker.preflight(cfg)
+        except Exception as e:
+            log(f"preflight 失敗 → 収集・生成せず終了: {e}")
+            ledger.record(slot_key, theme_lens[:80], "", "", [], "", status="error", error=str(e))
+            if breaker.is_tripped(cfg):
+                notify.slack(cfg, f":octagonal_sign: X Autopilot ブレーカー作動({slot_key}): X API 402 が"
+                                  f"{breaker.threshold(cfg)}回連続。以後のスロットを停止。支払い確認後に解除してください。")
+            else:
+                notify.slack(cfg, f":x: X Autopilot preflight 失敗({slot_key}): {e}")
+            return
 
     # 1) 収集: トレンド発見 → 話題選定 → 深掘り → ブリーフ
     signals, theme = build_signals(cfg, slot, theme_lens, style)
@@ -190,6 +209,9 @@ def run_slot(slot_key: str, dry_run: bool = False) -> None:
         notify.slack(cfg, f":x: X Autopilot 投稿失敗({slot_key}): {e}")
         ledger.record(slot_key, theme[:80], thread.get("topic", ""), thread.get("hook", ""), [], "",
                       status="error", error=f"{type(e).__name__}: {e}")
+        if breaker.is_payment_error(e) and breaker.is_tripped(cfg):
+            notify.slack(cfg, f":octagonal_sign: X Autopilot ブレーカー作動({slot_key}): X API 402 が"
+                              f"{breaker.threshold(cfg)}回連続。以後のスロットを停止。支払い確認後に解除してください。")
         raise
     ledger.record(slot_key, theme[:80], thread.get("topic", ""), thread.get("hook", ""),
                   result["ids"], result["url"], status="posted")

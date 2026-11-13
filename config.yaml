@@ -96,6 +96,12 @@ publish:
   mode: "direct"                     # direct=即投稿 / buffer=Slack予告30分後 / draft=下書き配信のみ
   buffer_minutes: 30                 # mode=buffer のときの予告猶予
 
+# --- 課金ブレーカー（2026-06-25〜08-24 の X API 402 空回り300回の再発防止） ---
+circuit_breaker:
+  enabled: true                      # false で無効（非推奨）
+  preflight: true                    # 収集・生成の前に X API を読み取り1回で確認。402 なら Grok/Claude を呼ばない
+  consecutive_402: 2                 # 402 がこの回数連続したら以後のスロットを停止（解除: python -m xautopilot.breaker --reset）
+
 # --- 通知 ---
 notify:
   slack_enabled: true                # SLACK_BOT_TOKEN があれば通知。無ければ自動でスキップ
