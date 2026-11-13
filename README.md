@@ -135,7 +135,7 @@ X自動投稿は 2026-08-24 から凍結中（`publish.frozen: true`）。この
 |---|---|
 | `revenue_gate/lanes.example.yaml` | 台帳の見本（架空の数字）。レーンごとの4段（露出→訪問→購入手前→着金）の数字・出典・観測日、いま回している作業、本人待ち |
 | `revenue_gate/lanes.yaml` | 実台帳。**このリポジトリは公開のためコミットしない**（`.gitignore` 済み）。見本を写して実数を入れる |
-| `revenue_gate/check.py` | 判定。詰まっている段、段に合わない作業（止める提案）、判定日の超過、本人のボタンを上位3件に絞った列を出す |
+| `revenue_gate/check.py` | 判定。詰まっている段、毎日回している数の目標と実績（止まっている・未達を挙げる）、段に効く足す作業、判定日の超過、本人のボタンを上位に絞った列を出す |
 | `revenue_gate/TODAY.md` | 直近の判定結果（`--write` で上書き・`.gitignore` 済み） |
 
 ```bash
@@ -150,6 +150,7 @@ python -m revenue_gate.check --lane etsy --strict
 python tests/gate_test.py
 ```
 
-- 作業の着手前に `--lane <id> --strict` を実行し、終了コード1（段に合わない作業がある）なら、その作業ではなく「次にやる作業」に切り替える。
+- 数は止めない。詰まっている段に効かない作業でも、数を追う作業は続け、段に効く作業を上に足す。
+- 作業の着手前に `--lane <id> --strict` を実行し、終了コード1（止まっている・目標に届いていない数がある）なら、まずその数を動かす。
 - 数字は出典で確かめたものだけを `lanes.yaml` に書く。取れない数字は `value: null`（未確認）のままにする。
 - 判定ルールの正本は Vault `resources/skills/daichi-revenue-gate/SKILL.md`。台帳の数字の正本も Vault に置く。実数・ログイン状況・本人待ちはこのリポジトリに書かない。

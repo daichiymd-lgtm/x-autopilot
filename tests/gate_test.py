@@ -43,12 +43,17 @@ def main():
     except ValueError:
         ok("理由なしの上書きは拒否", True)
 
-    # 2) 段に合わない作業
-    v["running"] = [{"work": "言い換え", "stage": "none"}, {"work": "題", "stage": "visit"},
-                    {"work": "AB", "stage": "visit", "effect_test": True}]
-    mm = [w for w, _, _ in g.audit_running(v, "visit", True, 30)]
-    ok("段外の作業と判定不能な効果検証だけを挙げる", mm == ["言い換え", "AB"], str(mm))
-    ok("未確認の段では作業を止めない", g.audit_running(u | {"running": [{"work": "x", "stage": "cash"}]}, "visit", False, 30) == [])
+    # 2) 数は止めない。未達と停止だけを挙げる
+    v["running"] = [{"work": "言い換え", "stage": "none", "target_per_day": 3, "actual_per_day": 3},
+                    {"work": "題", "stage": "visit", "target_per_day": 2, "actual_per_day": 1},
+                    {"work": "量産", "stage": "exposure", "stalled": True},
+                    {"work": "AB", "stage": "visit", "effect_test": True, "target_per_day": 3, "actual_per_day": 3}]
+    vs = g.volume_status(v, 30)
+    ok("段に効かない作業でも、数が出ていれば未達にしない", vs[0][2] is False, str(vs[0]))
+    ok("目標未達と停止を挙げる", [x[2] for x in vs] == [False, True, True, False])
+    ok("効果判定は保留でも数は続ける", "数は続ける" in vs[3][1] and vs[3][2] is False)
+    ok("止まっている数が効く段を返す", g.starved_stages(v) == {"visit", "exposure"})
+    ok("出力に「止める提案」を出さない", "止める提案" not in g.render(g.evaluate(yaml.safe_load(g.EXAMPLE.read_text(encoding="utf-8")), date(2026, 1, 15)), date(2026, 1, 15)))
 
     # 3) 判定日
     j = dict(lane(), judgment={"metric": "m", "set": "2026-11-01", "date": "2026-11-10"})
@@ -63,9 +68,11 @@ def main():
     by = {r["lane"]["id"]: r for r in res["lanes"]}
     got = tuple(by[k]["stage"] for k in ("shop", "kit", "prints", "blog"))
     ok("見本: 段の判定", got == ("prepurchase", "exposure", "exposure", "visit"), str(got))
-    mm = [bool(by[k]["mismatch"]) for k in ("shop", "kit", "prints", "blog")]
-    ok("見本: 段外の作業を挙げる", mm == [True, True, True, False], str(mm))
-    ok("見本: 本人のボタンは 承認→ログイン→宛先", [a["id"] for a in res["now"]] == ["APPROVE", "LOGIN", "CSV"])
+    mm = [any(x[2] for x in by[k]["volume"]) for k in ("shop", "kit", "prints", "blog")]
+    ok("見本: 数の停止・未達を挙げる", mm == [True, False, False, True], str(mm))
+    data4 = dict(data, owner_queue_max=4)
+    ids = [a["id"] for a in g.evaluate(data4, today)["now"]]
+    ok("見本: 止まっている数を動かす依頼もボタンに入る", ids == ["APPROVE", "LOGIN", "CSV", "MORE"], str(ids))
     n = len(res["now"]) + len(res["security"]) + len(res["later"])
     ok("見本: 本人待ちを落とさない", n == len(data["owner_asks"]), f"{n}/{len(data['owner_asks'])}")
     missing = [f"{ln['id']}.{k}" for ln in data["lanes"] for k, s2 in ln["stages"].items()

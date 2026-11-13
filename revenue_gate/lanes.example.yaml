@@ -5,6 +5,8 @@
 # 書き方の決まり
 # - 数字は出典ファイルか読戻しで確かめたものだけ。取れないものは value: null（＝未確認）。推測で埋めない。
 # - 各数字に date（観測日）と source（出典）を必ず付ける。
+# - running は毎日回している「数」。target_per_day（目標）と actual_per_day（実績）を書く。
+#   止まっているものは stalled: true。数は止める対象にしない（詰まっている段の作業は next に足す）。
 
 as_of: "2026-01-15"
 visit_floor_per_week: 30     # 週の訪問がこれ未満なら文言の効果検証をしない
@@ -22,7 +24,7 @@ lanes:
     stuck_override: prepurchase
     override_reason: "カートを取れていない出品には訪問が来ない。訪問不足の原因が価格にある"
     running:
-      - {work: "出品数を増やす", stage: exposure, mandate: "本人の指示（日付）"}
+      - {work: "出品数を増やす", stage: exposure, stalled: true, note: "管理画面のログイン切れ"}
     next:
       - "利益が残る商品だけ最安値に合わせる"
     judgment: {metric: "カート取得率が0%を超えた商品数", set: "2026-01-15", date: "2026-01-29"}
@@ -35,7 +37,7 @@ lanes:
       prepurchase: {value: null, unit: "購入ページ到達", date: null, source: "未取得"}
       cash:        {value: null, unit: "購入", date: null, source: "未取得"}
     running:
-      - {work: "既存記事の本文点検", stage: none}
+      - {work: "既存記事の本文点検", stage: none, target_per_day: 8, actual_per_day: 8}
     next:
       - "宛先が入り次第、1日5通の直接案内を送る"
     judgment: {metric: "購入1件", set: "2026-01-15", date: "2026-01-29"}
@@ -48,7 +50,7 @@ lanes:
       prepurchase: {value: null, unit: "カート追加", date: null, source: "未取得"}
       cash:        {value: 0, unit: "注文", date: "2026-01-14", source: "同上"}
     running:
-      - {work: "説明文の修正と7日判定", stage: none, effect_test: true}
+      - {work: "説明文の修正と7日判定", stage: none, effect_test: true, target_per_day: 3, actual_per_day: 3}
     next:
       - "写真を増やす、セットを作る、下書きを公開する"
     judgment: {metric: "検索経由の訪問が0を超える", set: "2026-01-15", date: "2026-01-29"}
@@ -61,7 +63,7 @@ lanes:
       prepurchase: {value: null, unit: "広告クリック", date: null, source: "未取得"}
       cash:        {value: 0, unit: "確定報酬（円）", date: "2026-01-10", source: "ASP管理画面"}
     running:
-      - {work: "題の改善", stage: visit}
+      - {work: "題の改善", stage: visit, target_per_day: 2, actual_per_day: 1}
     next:
       - "表示回数があるのにクリックが少ない記事の題を直す"
     judgment: {metric: "検索クリック（28日）", set: "2026-01-15", date: "2026-01-29"}
@@ -95,6 +97,6 @@ owner_asks:
   - id: MORE
     ask: "出品を増やす仕組みの切替方法を決める"
     kind: decision
-    minutes: null
+    minutes: null     # 所要が未確認でも、止まっている数を動かす依頼は本人のボタンに入る
     since: "2026-01-11"
     unlocks: [{lane: shop, stage: exposure}]
