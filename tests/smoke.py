@@ -122,7 +122,65 @@ def main():
     frz = {"publish": {"frozen": True, "enabled": False}}
     check("凍結中は RED を鳴らさない", health.analyze(errs, frz, now)["level"] == "FROZEN")
 
-    # 8) 認証情報の有無（警告のみ）
+    # 8) 課金ブレーカー（402 空回り再発防止）
+    from xautopilot import breaker
+    e402 = "HTTPException: 402 Payment Required\ncredits depleted"
+    def row(h, status="error", error=e402):
+        return {"ts": (now - timedelta(hours=h)).isoformat(), "status": status, "error": error}
+    check("402 を課金エラーと判定", breaker.is_payment_error(e402))
+    check("403 は課金エラー扱いしない", not breaker.is_payment_error("403 Forbidden"))
+    two = [row(0), row(1), row(2, "posted", "")]
+    check("402 2連続でブレーカー作動", breaker.is_tripped(live, two), f"streak={breaker.payment_streak(two)}")
+    check("402 1回では作動しない", not breaker.is_tripped(live, [row(0), row(1, "posted", "")]))
+    check("reset 記録で解除", not breaker.is_tripped(live, [row(0, breaker.RESET_STATUS, "")] + [row(1), row(2)]))
+    check("402 以外の error は数えない", breaker.payment_streak([row(0, error="ValueError: x"), row(1)]) == 0)
+    from xautopilot import budget as _bg
+    three = [row(0), row(1), row(2)]
+    check("出費ガードも3連続errorで停止", _bg.circuit_open(live, three))
+    check("breaker --reset 後は出費ガードも解除", not _bg.circuit_open(live, [row(0, breaker.RESET_STATUS, "")] + three))
+    h402 = health.analyze(two, live, now)
+    check("402 連続で health RED", h402["level"] == "RED" and h402["payment_streak"] == 2, str(h402["reasons"]))
+
+    # 9) run_slot: ブレーカー作動中・preflight 402 では Grok/Claude を一切呼ばない
+    import tempfile, json as _json
+    from xautopilot import run as runmod, collect, analyze as anmod, notify as notmod
+    tmp = Path(tempfile.mkdtemp()) / "ledger.json"
+    saved_ledger = ledger.LEDGER
+    saved = {}
+    calls = []
+    def boom(*a, **k):
+        calls.append("paid_api")
+        raise AssertionError("課金APIが呼ばれた")
+    class FakeClient:
+        def get_me(self):
+            raise Exception("402 Payment Required\ncredits depleted")
+    live_cfg = {**cfg, "publish": {**cfg["publish"], "frozen": False, "enabled": True, "mode": "direct"}}
+    patches = [(runmod, "load_config", lambda: live_cfg), (runmod, "load_env", lambda: None),
+               (runmod, "is_frozen", lambda c: False), (runmod, "build_signals", boom),
+               (collect, "collect_signals", boom), (anmod, "compose_thread", boom),
+               (publish, "_get_client", lambda: FakeClient()), (notmod, "slack", lambda *a, **k: None)]
+    try:
+        ledger.LEDGER = tmp
+        for mod, name, fn in patches:
+            saved[(mod, name)] = getattr(mod, name)
+            setattr(mod, name, fn)
+        slot0 = list(cfg["slots"])[0]
+        tmp.write_text(_json.dumps({"posts": []}), encoding="utf-8")
+        runmod.run_slot(slot0)
+        rows = ledger._load()["posts"]
+        check("preflight 402 で生成せず台帳に402記録", not calls and len(rows) == 1
+              and breaker.is_payment_error(rows[0].get("error")), str(rows[:1])[:120])
+        runmod.run_slot(slot0)
+        check("2回目の402でブレーカー作動", breaker.is_tripped(live_cfg, ledger._load()["posts"]))
+        n = len(ledger._load()["posts"])
+        runmod.run_slot(slot0)
+        check("作動中は preflight も呼ばず終了", not calls and len(ledger._load()["posts"]) == n)
+    finally:
+        ledger.LEDGER = saved_ledger
+        for (mod, name), fn in saved.items():
+            setattr(mod, name, fn)
+
+    # 10) 認証情報の有無（警告のみ）
     print("\n--- 認証情報（投稿前に要設定） ---")
     for k in ["ANTHROPIC_API_KEY", "XAI_API_KEY", "X_API_KEY", "X_API_SECRET",
               "X_ACCESS_TOKEN", "X_ACCESS_TOKEN_SECRET"]:

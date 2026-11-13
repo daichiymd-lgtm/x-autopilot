@@ -22,6 +22,7 @@ import sys
 from datetime import datetime, timedelta
 
 from .config import ROOT, load_config, now_jst
+from . import breaker
 
 LEDGER = ROOT / "data" / "_post_ledger.json"
 
@@ -73,7 +74,11 @@ def analyze(posts: list, cfg: dict, now: datetime) -> dict:
 
     no_reason = sum(1 for p in posts if p.get("status") == "error" and not p.get("error"))
 
+    pay_streak = breaker.payment_streak(posts)
     reasons = []
+    if pay_streak >= breaker.threshold(cfg):
+        reasons.append(("RED", f"X API 402（クレジット切れ）が {pay_streak} 件連続。ブレーカー作動中"
+                               "（支払い確認 → `python -m xautopilot.breaker --reset`）"))
     if streak >= ERROR_STREAK_RED:
         reasons.append(("RED", f"直近 error が {streak} 件連続（投稿が1本も通っていない）"))
     if not frozen and (last_post is None or now - last_post > timedelta(days=STALE_DAYS_RED)):
@@ -100,6 +105,7 @@ def analyze(posts: list, cfg: dict, now: datetime) -> dict:
         "frozen": frozen,
         "reasons": reasons,
         "error_streak": streak,
+        "payment_streak": pay_streak,
         "last_post": last_post,
         "last_run": last_run,
         "week_total": len(week),
@@ -125,6 +131,7 @@ def render(r: dict, now: datetime) -> str:
         f"| 最終投稿成功 | {_fmt(r['last_post'])} |",
         f"| 最終実行 | {_fmt(r['last_run'])} |",
         f"| 直近 error 連続 | {r['error_streak']} 件 |",
+        f"| うち X API 402 連続 | {r['payment_streak']} 件 |",
         f"| 直近7日 成功/実行 | {r['week_ok']} / {r['week_total']} |",
         f"| 台帳件数 | {r['total']} |",
         "",

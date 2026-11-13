@@ -88,7 +88,12 @@ def circuit_open(cfg: dict, posts: list) -> bool:
     n = int(_limits(cfg)["max_consecutive_errors"])
     if n <= 0:
         return False
-    relevant = [p for p in posts if p.get("status") in ("posted", "error")]
+    relevant = []
+    for p in posts:
+        if p.get("status") == "breaker_reset":  # 人が支払い等を確認して解除した地点より前は数えない
+            break
+        if p.get("status") in ("posted", "error"):
+            relevant.append(p)
     recent = relevant[:n]
     return len(recent) >= n and all(p.get("status") == "error" for p in recent)
 

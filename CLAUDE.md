@@ -19,6 +19,12 @@
 - `BudgetExceeded` は `BaseException`。`except Exception` のフォールバックで握りつぶさせないため。**`Exception` に変えない**
 - 新しく API を呼ぶ箇所を足すときは、Grok は `budget.charge(cfg, "grok")`、Claude は `budget.anthropic_client()` を通す
 
+## 課金ブレーカー（`xautopilot/breaker.py`）
+- 出費ガードの手前の層。投稿する回だけ、収集・生成の**前**に X API を読み取り1回で確認（preflight）。402 なら Grok/Claude を呼ばずに終了し台帳に記録
+- 402 が2回連続（`circuit_breaker.consecutive_402`）で以後のスロットと週次学習を停止。health も RED
+- 解除は支払いを確認してから `python -m xautopilot.breaker --reset`（台帳に `breaker_reset` を残す）
+- 根拠：2026-06-25〜08-24 の失敗は実行ログ上 `402 Payment Required / credits depleted`（8/19・8/24 で確認。6〜7月はログ期限切れで未確認）
+
 ## 構成
 `run.py`（司令塔）→ `collect.py`（Grok）→ `analyze.py`（Claude）→ `gates.py`（安全ゲート）→ `publish.py`（X API）→ `ledger.py`（台帳）。週次の学習は `learn.py`。挙動は `config.yaml` で変える。
 
