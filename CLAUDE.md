@@ -25,6 +25,11 @@
 - 解除は支払いを確認してから `python -m xautopilot.breaker --reset`（台帳に `breaker_reset` を残す）
 - 根拠：2026-06-25〜08-24 の失敗は実行ログ上 `402 Payment Required / credits depleted`（8/19・8/24 で確認。6〜7月はログ期限切れで未確認）
 
+## Orca で動かすとき（`orca.yaml`、手順は `docs/orca.md`）
+- 作業スペースには `.env` を持ち込まない。`.worktreeinclude` に `.env` を足さない
+- 準備処理の凍結チェック（frozen=true／FROZEN≠0／.env なし）を外したり緩めたりしない
+- Python は作業スペースの `.venv/bin/python` を使う
+
 ## 構成
 `run.py`（司令塔）→ `collect.py`（Grok）→ `analyze.py`（Claude）→ `gates.py`（安全ゲート）→ `publish.py`（X API）→ `ledger.py`（台帳）。週次の学習は `learn.py`。挙動は `config.yaml` で変える。
 
