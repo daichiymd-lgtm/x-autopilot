@@ -1,0 +1,46 @@
+# Orca（複数のAIエージェントを並行で動かすデスクトップアプリ）用の設定
+# 仕様: https://github.com/stablyai/orca/blob/main/docs/site/content/docs/model/orca-yaml.mdx
+#
+# 方針: Orca の作業スペース（worktree）から課金が起きないようにする
+#   1. APIキー（.env）は作業スペースに持ち込まない（.worktreeinclude に .env を書かない）
+#   2. 凍結が外れていたら準備を失敗させ、AIエージェントを起動させない
+#   3. 準備の最後にネットワーク不要のスモークテストを回す
+# 凍結の解除・cron の再開・publish.enabled=true は本人の承認が要る（CLAUDE.md）。
+
+scripts:
+  setup: |
+    echo "== x-autopilot: Orca 作業スペースの準備 =="
+
+    # 1) 課金ガード: 凍結が config.yaml で true であること
+    if ! grep -Eq '^[[:space:]]+frozen:[[:space:]]+true' config.yaml; then
+      echo "停止: config.yaml の publish.frozen が true ではありません。本人の承認なしに解凍しないこと。" >&2
+      exit 1
+    fi
+    if [ "${X_AUTOPILOT_FROZEN:-1}" = "0" ]; then
+      echo "停止: X_AUTOPILOT_FROZEN=0 が設定されています。作業スペースでは凍結のまま使います。" >&2
+      exit 1
+    fi
+
+    # 2) 課金ガード: APIキーを作業スペースに置かない
+    if [ -f .env ]; then
+      echo "停止: 作業スペースに .env があります。APIキーは持ち込まない方針です。" >&2
+      exit 1
+    fi
+
+    # 3) 依存を作業スペースごとの仮想環境に入れる
+    python3 -m venv .venv
+    .venv/bin/pip install -q --upgrade pip
+    .venv/bin/pip install -q -r requirements.txt
+
+    # 4) 検証（ネットワーク不要）
+    .venv/bin/python tests/smoke.py
+    echo "== 準備OK（凍結中・APIキーなし）=="
+
+# 準備（テスト含む）が通ってから AI を起動する
+setupAgentStartupPolicy: wait-for-setup
+
+defaultTabs:
+  # 1つ目は AI エージェント用（Orca がここでエージェントを起動する）
+  - title: Agent
+  - title: 状態
+    command: git status --short && git log --oneline -3
